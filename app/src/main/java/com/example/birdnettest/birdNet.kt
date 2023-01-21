@@ -90,7 +90,7 @@ class birdNet (view: TextView,
             val outputFeature0 = outputs.outputFeature0AsTensorBuffer // format output to buffer
             var outputString   = ""                                   // output string of all results
             val outputAsFloat  = outputFeature0.floatArray            // get all results as float
-            outputAsFloat.sort()
+            outputAsFloat.sortDescending()
             // build string m with 5 highest confidence matches
             // TODO - get corresponding label/bird species from assets/labels.txt
             for (i in 0..4) {
