@@ -88,24 +88,17 @@ class birdNet (view: TextView,
      */
     fun runTest() {
         // TODO - check for uninitialized model
-//        try {
+        try {
             // read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             val samples    = getSamples(pathToBirdCall) // get chunks of audio data input
-            //val inputBuff  = samples[0]                 // test on first sample
-        val inputBuff = FloatArray(144000)
-        for (i in inputBuff.indices) {
-            inputBuff[i] = 0.001f
-        }
-            var outputBuff = FloatArray(3337)
-//            var outputBuff = mutableMapOf<Integer, Float>()       // output confidences for all 3337
-//            var elements = FloatBuffer.allocate(3337)
+            val inputBuff  = samples[0]                 // test on first sample
+            var outputBuff = FloatArray(3337)      // output confidences for all 3337
             // TODO - format input/output
 
             model.run(inputBuff, outputBuff)
-//            model.runForMultipleInputsOutputs(arrayOf(inputBuff), outputBuff) // run birdnet and get output
             var outputString   = ""          // output string of all results
 
-//            outputBuff.sortDescending() // get highest confidence values
+            outputBuff.sortDescending() // get highest confidence values
             // TODO - get corresponding label/bird species from assets/labels.txt
             for (i in 0..4) {
                 outputString += message.format(outputBuff[i], "dummy")
@@ -115,10 +108,11 @@ class birdNet (view: TextView,
 
             // Releases model resources if no longer used.
             model.close()
-//        }
-//        catch (e: Exception) {
-//            println(errorMsg.format(e.message))
-//        }
+        }
+        catch (e: Exception) {
+            println(errorMsg.format(e.message))
+            model.close()
+        }
     }
 
     /**
