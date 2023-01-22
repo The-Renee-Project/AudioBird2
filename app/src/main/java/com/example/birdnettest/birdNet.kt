@@ -1,28 +1,37 @@
 package com.example.birdnettest
 
 // Android libraries
-import android.content.Context // context to access screen elements
-import android.widget.TextView // text view to update text
-
-// Birdnet tflite model
+import android.content.Context
+import android.widget.TextView
 import com.example.birdnettest.ml.BirdnetGlobal3kV22MdataModelFp16
+import org.tensorflow.lite.DataType
 
 // tensorflow libraries
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer // buffer to format data
-import org.tensorflow.lite.DataType                          // tensorflow data types
+import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 
 // java imports
-import java.nio.BufferUnderflowException // check for exceptions
-import java.nio.ByteBuffer               // byte buffer to format input/output
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteBuffer.allocateDirect
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 
 class birdNet (view: TextView,
                ctx: Context) {
+    private val pathToBirdNet  = "BirdNET_GLOBAL_3K_V2.2_Model_FP32.tflite" // birdnet tflite model
     private val pathToBirdCall = "MountainChickadee.mp3" // test file
     private val errorMsg       = "ERROR: %s\n"           // error message on failed model
     private val message        = "%.2f %s\n"             // message with model output prediction
-    private var sampleRate     = 44100                   // standard sampling rate of audio files
+    private var sampleRate     = 48000                   // standard sampling rate of audio files
     private val display        = view                    // text label to output to
     private val context        = ctx                     // context/app screen
+
+    private lateinit var model: Interpreter              // interpreter
+
+    init {
+        buildInterpreter()
+    }
 
     /**
      * Takes an audio file and returns a list of 3 second
@@ -35,7 +44,7 @@ class birdNet (view: TextView,
         val audioBytes  = ByteArray(sampleRate * 3) // 3 seconds worth of audio bytes
         val output: ArrayList<ByteArray> = ArrayList()  // all 3 second audio chunks
 
-        // read in audio bytes in 3 second intervals until end of file
+        // read in audio bytes in 3 second intervals until end of file, truncate any extra
         while (audioStream.read(audioBytes) != -1) {
             output.add(audioBytes.clone()) // build ArrayList using deep copy
         }
@@ -44,20 +53,9 @@ class birdNet (view: TextView,
         val fpOutput: ArrayList<FloatArray> = ArrayList() // float array output
         // convert every 3 second byte buffer to float array
         for (byteBuf in output) {
-            /*
-            // TODO -  buffer does not have exactly 4 bytes needed to make float
-            while ((byteBuf.size % 4) != 0) {
-                // add random data to force fit into float
-            }
-            */
-            val floatChunk = FloatArray(byteBuf.size/4) // array of floats from bytes
-            val buffer     = ByteBuffer.wrap(byteBuf)       // use ByteBuffer for conversion
-            try {
-                for (i in floatChunk.indices) {
-                    floatChunk[i] = buffer.float // automatically convert to floats from buffer
-                }
-            } catch (e: BufferUnderflowException) {
-                println(errorMsg.format(e.message))
+            val floatChunk = FloatArray(byteBuf.size) // array of floats from bytes
+            for (i in floatChunk.indices) {
+                floatChunk[i] = byteBuf[i].toFloat() // convert byte to float
             }
             fpOutput.add(floatChunk)
         }
@@ -66,45 +64,61 @@ class birdNet (view: TextView,
     }
 
     /**
+     * Build interpreter
+     */
+    private fun buildInterpreter() {
+        val inputStream = context.assets.open(pathToBirdNet) // get birdnet tflite
+        val buffer      = ByteArray(3000 )              // read in 3 KB chunks, arbitrary
+        var bytesRead   = inputStream.read(buffer)          // Check how many bytes read
+        val output      = ByteArrayOutputStream()           // Read tflite raw bytes
+        // keep reading until all bytes read
+        while (bytesRead != -1) {
+            output.write(buffer, 0, bytesRead)
+            bytesRead = inputStream.read(buffer)
+        }
+        val rawBirdNet  = output.toByteArray() // Get raw byte array
+        val directBytes = ByteBuffer.allocateDirect(rawBirdNet.size) // ensure correct byte order
+        directBytes.order(ByteOrder.nativeOrder()) // store bytes in native order of phone
+        directBytes.put(rawBirdNet)                // write bytes
+        model = Interpreter(directBytes)           // build interpreter to model
+    }
+
+    /**
      * Run BirdNet tflite model on downloaded audio file sample
      */
     fun runTest() {
-        try {
-            val model = BirdnetGlobal3kV22MdataModelFp16.newInstance(context) //
+        // TODO - check for uninitialized model
+//        try {
+            // read in 144,000 floats - 3 seconds of audio sampled at 48kHz
+            val samples    = getSamples(pathToBirdCall) // get chunks of audio data input
+            //val inputBuff  = samples[0]                 // test on first sample
+        val inputBuff = FloatArray(144000)
+        for (i in inputBuff.indices) {
+            inputBuff[i] = 0.001f
+        }
+            var outputBuff = FloatArray(3337)
+//            var outputBuff = mutableMapOf<Integer, Float>()       // output confidences for all 3337
+//            var elements = FloatBuffer.allocate(3337)
+            // TODO - format input/output
 
-            // Creates inputs for reference.
-            // birdnet.tflite expects a 1D array of 3 32 bit floats as input
-            val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 3), DataType.FLOAT32)
-            val samples       = getSamples(pathToBirdCall) // get chunks of audio data input
+            model.run(inputBuff, outputBuff)
+//            model.runForMultipleInputsOutputs(arrayOf(inputBuff), outputBuff) // run birdnet and get output
+            var outputString   = ""          // output string of all results
 
-            // dummy data to test model
-            // TODO - figure out why birdnet tflite only accepts 3 floats as input
-            var buf = ByteBuffer.allocateDirect(3*4)
-            buf.putFloat(1.0f)
-            buf.putFloat(1.0f)
-            buf.putFloat(1.0f)
-            inputFeature0.loadBuffer(buf)
-
-            // Runs model inference and gets result.
-            val outputs        = model.process(inputFeature0)         // run birdnet and get output
-            val outputFeature0 = outputs.outputFeature0AsTensorBuffer // format output to buffer
-            var outputString   = ""                                   // output string of all results
-            val outputAsFloat  = outputFeature0.floatArray            // get all results as float
-            outputAsFloat.sortDescending()
-            // build string m with 5 highest confidence matches
+//            outputBuff.sortDescending() // get highest confidence values
             // TODO - get corresponding label/bird species from assets/labels.txt
             for (i in 0..4) {
-                outputString += message.format(outputAsFloat[i], "dummy")
+                outputString += message.format(outputBuff[i], "dummy")
             }
             println(outputString)       // print to debug console
             display.text = outputString // print result to screen TODO - make prettier
 
             // Releases model resources if no longer used.
             model.close()
-        }
-        catch (e: IllegalStateException) {
-            display.text = errorMsg.format(e.message)
-        }
+//        }
+//        catch (e: Exception) {
+//            println(errorMsg.format(e.message))
+//        }
     }
 
     /**
@@ -126,6 +140,22 @@ class birdNet (view: TextView,
 
 
 /* Probably useless code
+/*
+            val model = BirdnetGlobal3kV22MdataModelFp16.newInstance(context)
+            // Only accepts 3 because is not actual classifier - used to filter results from
+            // actual birdnet using latitude, longitude and week of year
+            val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 3), DataType.FLOAT32)
+            var buff = ByteBuffer.allocateDirect(3*4)
+            buff.putFloat(1.0f)
+            buff.putFloat(1.0f)
+            buff.putFloat(1.0f)
+            inputFeature0.loadBuffer(buff)
+
+            // Runs model inference and gets result.
+            val outputs        = model.process(inputFeature0)         // run birdnet and get output
+            val outputFeature0 = outputs.outputFeature0AsTensorBuffer // format output to buffer
+            var outputString   = ""                                   // output string of all results
+            val outputAsFloat  = outputFeature0.floatArray            // get all results as float
     /**
      * Start inference using interpreter with birdnet tflite mode
      */
