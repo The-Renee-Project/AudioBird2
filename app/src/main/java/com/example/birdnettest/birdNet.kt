@@ -4,6 +4,7 @@ package com.example.birdnettest
 import android.content.Context
 import android.widget.TextView
 import com.example.birdnettest.ml.BirdnetGlobal3kV22MdataModelFp16
+import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp16
 import org.tensorflow.lite.DataType
 
 // tensorflow libraries
@@ -91,20 +92,38 @@ class birdNet (view: TextView,
         try {
             // read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             val samples    = getSamples(pathToBirdCall) // get chunks of audio data input
-            val inputBuff  = samples[0]                 // test on first sample
-            var outputBuff = FloatArray(3337)      // output confidences for all 3337
-            // TODO - format input/output
+//            val inputBuff  = samples[0]                 // test on first sample
+//            var outputBuff = FloatArray(3337)      // output confidences for all 3337
+//            // TODO - format input/output
+//
+//            model.run(inputBuff, outputBuff)
+//            var outputString   = ""          // output string of all results
+//
+//            outputBuff.sortDescending() // get highest confidence values
+//            // TODO - get corresponding label/bird species from assets/labels.txt
+//            for (i in 0..4) {
+//                outputString += message.format(outputBuff[i], "dummy")
+//            }
+//            println(outputString)       // print to debug console
+//            display.text = outputString // print result to screen TODO - make prettier
 
-            model.run(inputBuff, outputBuff)
-            var outputString   = ""          // output string of all results
+            val model = BirdnetGlobal3kV22ModelFp16.newInstance(context)
 
-            outputBuff.sortDescending() // get highest confidence values
-            // TODO - get corresponding label/bird species from assets/labels.txt
-            for (i in 0..4) {
-                outputString += message.format(outputBuff[i], "dummy")
-            }
-            println(outputString)       // print to debug console
-            display.text = outputString // print result to screen TODO - make prettier
+            // Creates inputs for reference.
+            val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 144000), DataType.FLOAT32)
+
+            var byteBuffer = ByteBuffer.allocateDirect(144000*4)
+
+            inputFeature0.loadBuffer(byteBuffer)
+
+            // Runs model inference and gets result.
+            val outputs = model.process(inputFeature0)
+            val outputFeature0 = outputs.outputFeature0AsTensorBuffer
+            val outputAsFloat  = outputFeature0.floatArray
+
+            println(outputAsFloat[0]);
+
+            var outputString   = ""
 
             // Releases model resources if no longer used.
             model.close()
