@@ -4,7 +4,7 @@ package com.example.birdnettest
 import android.content.Context
 import android.media.MediaPlayer
 import android.widget.TextView
-import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp16
+import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
 import org.tensorflow.lite.DataType
 
 // tensorflow libraries
@@ -26,7 +26,7 @@ class birdNet (view: TextView,
     private val display        = view                    // text label to output to
     private val context        = ctx                     // context/app screen
 
-    private lateinit var model: BirdnetGlobal3kV22ModelFp16 // interpreter
+    private lateinit var model: BirdnetGlobal3kV22ModelFp32 // interpreter
     private val mediaPlayer = MediaPlayer()
 
     /**
@@ -101,7 +101,7 @@ class birdNet (view: TextView,
     fun runTest() {
         // TODO - check for uninitialized model
         try {
-            model = BirdnetGlobal3kV22ModelFp16.newInstance(context) // build interpreter
+            model = BirdnetGlobal3kV22ModelFp32.newInstance(context) // build interpreter
             // read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             val samples = getSamples(pathToBirdCall)                 // get chunks of audio data input
             // Creates tensor buffer for input for inference.
@@ -131,97 +131,3 @@ class birdNet (view: TextView,
         return (1.0 / (1.0 + kotlin.math.exp(-1.5 * x))).toFloat()// taken from birdnet code
     }
 }
-
-
-/* Probably useless code
-            val model = BirdnetGlobal3kV22MdataModelFp16.newInstance(context)
-            // Only accepts 3 because is not actual classifier - used to filter results from
-            // actual birdnet using latitude, longitude and week of year
-            val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 3), DataType.FLOAT32)
-            var buff = ByteBuffer.allocateDirect(3*4)
-            buff.putFloat(1.0f)
-            buff.putFloat(1.0f)
-            buff.putFloat(1.0f)
-            inputFeature0.loadBuffer(buff)
-
-            // Runs model inference and gets result.
-            val outputs        = model.process(inputFeature0)         // run birdnet and get output
-            val outputFeature0 = outputs.outputFeature0AsTensorBuffer // format output to buffer
-            var outputString   = ""                                   // output string of all results
-            val outputAsFloat  = outputFeature0.floatArray            // get all results as float
-    /**
-     * Start inference using interpreter with birdnet tflite mode
-     */
-    private fun startAudioInterpretation(samples: ArrayList<ByteArray>) {
-        // input = array of 3 second audio chunks 32 bit fp
-        var output = -1.23f    // output = prediction/classification confidence, should also be bird species
-        val input = samples[0] // input audio buffer with floating point audio bytes
-        println("Inference started")
-        // run inference on input
-        model.run(input, output)              // run birdnet with on input
-        println("Inference completed")
-        val result = sigmoid(output)          // run output through activation function
-        display.text = message.format(result) // print result to screen
-    }
-            val inputStream: FileInputStream = FileInputStream(birdNet.fileDescriptor)
-            val fileChannel = inputStream.channel
-            val startOffset: Long = birdNet.startOffset
-            val declaredLength: Long = birdNet.length
-            val direct = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
-
-
-            val inputStream = FileInputStream(birdNet.fileDescriptor)
-            var buf = ByteArray(birdNet.length.toInt())
-            println(buf.size)
-            inputStream.read(buf)
-            inputStream.close()
-
-            var tempFile = File.createTempFile("tmp", "tflite") // create temp mp3 from bytes
-            tempFile.deleteOnExit()                                     // free up file
-            var fileOS = FileOutputStream(tempFile)                     // write audio byte chunks to file
-            fileOS.write(buf)                                    // write first 3 sec
-            fileOS.close()                                              // close output stream
-
-            var bf = ByteBuffer.wrap(buf)
-            var direct = ByteBuffer.allocateDirect(bf.remaining())
-            if (bf.hasArray()) {
-                direct.put(bf.array(), bf.arrayOffset(), bf.remaining())
-            }
-            else{
-                println("No Array")
-            }
-            // TEMP - check that samples are read properly in 3 sec bytes
-            var tempFile = File.createTempFile("tmp", "mp3") // create temp mp3 from bytes
-            tempFile.deleteOnExit()                                     // free up file
-            var fileOS = FileOutputStream(tempFile)                     // write audio byte chunks to file
-            fileOS.write(samples[0])                                    // write first 3 sec
-            fileOS.close()                                              // close output stream
-            // play file
-            var mediaPlayer = MediaPlayer()        // media player to play sound
-            //var fileIS = FileInputStream(pathToBirdCall)
-            var fileIS = FileInputStream(tempFile) // read from temp file
-            mediaPlayer.setDataSource(fileIS.fd)   // set temp file to play from
-            //mediaPlayer.setDataSource(birdcall.fileDescriptor, birdcall.startOffset, birdcall.length)
-            mediaPlayer.prepare()                  // start up audio/speaker
-            mediaPlayer.start()                    // start playing sound
-
-    /**
-     * Build interpreter
-     */
-    private fun buildInterpreter() {
-        val inputStream = context.assets.open(pathToBirdNet) // get birdnet tflite
-        val buffer      = ByteArray(3000 )              // read in 3 KB chunks, arbitrary
-        var bytesRead   = inputStream.read(buffer)          // Check how many bytes read
-        val output      = ByteArrayOutputStream()           // Read tflite raw bytes
-        // keep reading until all bytes read
-        while (bytesRead != -1) {
-            output.write(buffer, 0, bytesRead)
-            bytesRead = inputStream.read(buffer)
-        }
-        val rawBirdNet  = output.toByteArray() // Get raw byte array
-        val directBytes = ByteBuffer.allocateDirect(rawBirdNet.size) // ensure correct byte order
-        directBytes.order(ByteOrder.nativeOrder()) // store bytes in native order of phone
-        directBytes.put(rawBirdNet)                // write bytes
-        model = Interpreter(directBytes)           // build interpreter to model
-    }
-    */
