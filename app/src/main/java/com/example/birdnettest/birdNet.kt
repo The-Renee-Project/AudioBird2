@@ -12,6 +12,7 @@ import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
 
 // java imports
 import java.nio.ByteBuffer.allocateDirect
@@ -21,8 +22,9 @@ class birdNet (view: TextView,
                ctx: Context) {
     private val pathToBirdCall = "soundscape.wav" // test file
     private val errorMsg       = "ERROR: %s\n"           // error message on failed model
-    private val message        = "%s: %.5f\n"             // message with model output prediction
+    private val message        = "%s: %.5f\n"            // message with model output prediction
     private var sampleRate     = 48000                   // standard sampling rate of audio files
+    private val bitRate        = 16                      // bits per sample of wav files
     private val display        = view                    // text label to output to
     private val context        = ctx                     // context/app screen
 
@@ -37,14 +39,33 @@ class birdNet (view: TextView,
         val birdcall = context.assets.openFd(audioFile) // relative path to assets folder
         // split into 3 second chunks - 3 * sample rate
         val audioStream = birdcall.createInputStream()   // Create File input stream from path
-        val audioBytes  = ByteArray(sampleRate * 3) // 3 seconds worth of audio bytes
+        val audioBytes  = ByteArray(sampleRate * 3 * (bitRate/8)) // 3 seconds worth of audio bytes
         val output: ArrayList<ByteArray> = ArrayList()  // all 3 second audio chunks
 
+        val audioFloat = FloatArray(144000)
+        val audioByte = ByteArray(4) // bit rate of 16
+        val byteBuf = allocateDirect(4)
+        byteBuf.order(ByteOrder.nativeOrder())
+        val fpOutput = ArrayList<FloatArray>() // float array output
+
         // read in audio bytes in 3 second intervals until end of file, truncate any extra
+        var index = 0
         while (audioStream.read(audioBytes) != -1) {
-            output.add(audioBytes.clone()) // build ArrayList using deep copy
+            // output.add(audioBytes.clone()) // build ArrayList using deep copy
+            for (i in audioBytes.indices step 2) {
+                byteBuf.put(audioBytes[i])
+                byteBuf.put(audioBytes[i+1])
+                byteBuf.put(0)
+                byteBuf.put(0)
+                audioFloat[index++] = byteBuf.getFloat(0)
+                println(audioFloat[index - 1])
+                byteBuf.clear()
+            }
+            index = 0
+            fpOutput.add(audioFloat.clone())
         }
 
+        /*
         var tempFile = File.createTempFile("tmp", ".wav") // create temp mp3 from bytes
         tempFile.deleteOnExit()                                      // free up file
         var fileOS = FileOutputStream(tempFile)                      // write audio byte chunks to file
@@ -64,17 +85,18 @@ class birdNet (view: TextView,
         for (byteBuf in output) {
             val floatChunk = FloatArray(byteBuf.size) // array of floats from bytes
             for (i in floatChunk.indices) {
-                floatChunk[i] = byteBuf[i].toFloat() // convert byte to float
+                floatChunk[i] = byteBuf[i].toShort().toFloat() // convert byte to float
             }
             fpOutput.add(floatChunk)
         }
+         */
 
         return fpOutput
     }
 
     fun runInterpreter(samples: ArrayList<FloatArray>) {
         val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 144000), DataType.FLOAT32)
-        var byteBuffer = allocateDirect(144000*4) // 144000 4 byte floats
+        val byteBuffer = allocateDirect(144000*4) // 144000 4 byte floats
         byteBuffer.order(ByteOrder.nativeOrder())        // Format byte order
         var outputs: Any
         var outputAsFloatArr: FloatArray
@@ -100,19 +122,19 @@ class birdNet (view: TextView,
      */
     fun runTest() {
         // TODO - check for uninitialized model
-        try {
+//        try {
             model = BirdnetGlobal3kV22ModelFp32.newInstance(context) // build interpreter
             // read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             val samples = getSamples(pathToBirdCall)                 // get chunks of audio data input
             // Creates tensor buffer for input for inference.
-            runInterpreter(samples)
+//            runInterpreter(samples)
             // Releases model resources if no longer used.
             model.close()
-        }
-        catch (e: Exception) {
-            println(errorMsg.format(e.message))
-            model.close()
-        }
+//        }
+//        catch (e: Exception) {
+//            println(errorMsg.format(e.message))
+//            model.close()
+//        }
     }
 
     /**
