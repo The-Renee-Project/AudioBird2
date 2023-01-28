@@ -2,119 +2,139 @@ package com.example.birdnettest
 
 // Android libraries
 import android.content.Context
-import android.media.MediaPlayer
 import android.widget.TextView
-import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
-import org.tensorflow.lite.DataType
-
-// tensorflow libraries
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
+import android.os.Environment
 
 // java imports
 import java.nio.ByteBuffer.allocateDirect
+import java.io.FileOutputStream
 import java.nio.ByteOrder
+import java.io.File
+
+// tensorflow libraries
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import org.tensorflow.lite.DataType
+
+// External Libraries
+import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
+import com.jlibrosa.audio.JLibrosa
 
 class birdNet (view: TextView,
                ctx: Context) {
-    private val pathToBirdCall = "soundscape.wav" // test file
-    private val errorMsg       = "ERROR: %s\n"           // error message on failed model
-    private val message        = "%s: %.5f\n"            // message with model output prediction
-    private var sampleRate     = 48000                   // standard sampling rate of audio files
-    private val bitRate        = 16                      // bits per sample of wav files
-    private val display        = view                    // text label to output to
-    private val context        = ctx                     // context/app screen
+    private val pathToBirdCall = "MountainChickadee.wav" // Audio file with bird call
+    private val errorMsg       = "ERROR: %s\n\n" // Error message on failed model
+    private val message        = "%s: %.5f\n"    // Message with model output prediction
+    private var sampleRate     = 48000           // Standard sampling rate of audio files
+    private val display        = view            // Text label to output to
+    private val context        = ctx             // Context/app screen
 
-    private lateinit var model: BirdnetGlobal3kV22ModelFp32 // interpreter
-    private val mediaPlayer = MediaPlayer()
+    private lateinit var species: List<String> // All species
+    private lateinit var model: BirdnetGlobal3kV22ModelFp32 // Birdnet interpreter
+
+    /**
+     * Creates temporary file of audio data to access for librosa
+     */
+    private fun makeFile(audioFile: String): String {
+        val birdcall = context.assets.open(audioFile) // Relative path to assets folder
+        // TODO - handle non wav files
+        //      - handle files in external drive/SD card
+        // Read data into temp file to pass to librosa
+        val tempFile = File.createTempFile("tmp", ".wav") // Create temp wav from bytes
+        tempFile.deleteOnExit()                                      // Free up file
+        val fileOS = FileOutputStream(tempFile)                      // Write audio byte chunks to file
+        var byte: Int // Read in single bytes to make sure we get whole file
+        while (true) {
+            byte = birdcall.read() // Read in a single byte
+            // Stop when end of file
+            if (byte == -1) {break}
+            fileOS.write(byte)
+        }
+        birdcall.close() // Close reference to file
+        fileOS.close()   // Close output stream
+
+        return tempFile.absolutePath
+    }
+
+    /**
+     * Segment audio into 3 second chunks, at sample rate 48kHz
+     */
+    private fun segmentAudio(audioData: FloatArray): ArrayList<FloatArray> {
+        val chunks = FloatArray(144000)  // 3 second chunks
+        val output = ArrayList<FloatArray>() // Arraylist of all chunks
+        // Read in chunks from audio file
+        for (i in audioData.indices step 144000) {
+            // Truncate any data that is not 3 seconds worth
+            if ((audioData.size - i) < 144000) {break}
+            audioData.copyInto(chunks, 0, i, i + 144000)
+            output.add(chunks.clone())
+        }
+        return output
+    }
+
+    /**
+     * Activation function taken from birdnet-analyzer code
+     */
+    private fun sigmoid(prediction: Float): Float {
+        return (1.0 / (1.0 + kotlin.math.exp(-1.5 * prediction.coerceIn(-15.0f, 15.0f)))).toFloat()
+    }
+
+    /**
+     * Get string with 5 highest confidence species
+     */
+    private fun buildString(confidences: FloatArray): String {
+        var outputString = ""
+        val topFive = confidences.sortedArrayDescending().copyOfRange(0, 5) // Get 5 highest confidences
+        // Build string with 5 highest confidences and corresponding species
+        for (confidence in topFive) {
+            val index = confidences.indexOfFirst{it == confidence}
+            outputString += message.format(species[index], sigmoid(confidence))
+        }
+        return outputString
+    }
+
+    /**
+     * Run Birdnet on audio samples and return array of confidences
+     */
+    private fun getConfidences(samples: FloatArray): FloatArray {
+        // Fill with values from audio file
+        val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 144000), DataType.FLOAT32)
+        val byteBuffer = allocateDirect(144000*4) // 144000 4 byte floats
+        byteBuffer.order(ByteOrder.nativeOrder())        // Format byte order
+        for (float in samples) {
+            byteBuffer.putFloat(float)
+        }
+        inputFeature0.loadBuffer(byteBuffer) // initialize buffer
+        // Runs inference using model and gets output
+        return model.process(inputFeature0).outputFeature0AsTensorBuffer.floatArray
+    }
+
+    /**
+     * Calls BirdNet on given samples of audio and prints top confidences to screen
+     */
+    private fun runInterpreter(samples: ArrayList<FloatArray>) {
+        var outputString = "" // String output to screen
+        for (i in samples.indices) {
+            outputString += "+++++++++ (%d to %d seconds) ++++++++++\n".format(3*i, 3*i + 3)
+            outputString += buildString(getConfidences(samples[i])) // Get top 5 outputs
+            outputString += "+++++++++++++++++++++++++++++++++\n\n"
+        }
+        display.text = outputString
+    }
 
     /**
      * Takes an audio file and returns a list of 3 second
      * audio byte chunks for input to birdnet
      */
     private fun getSamples(audioFile: String): ArrayList<FloatArray> {
-        val birdcall = context.assets.openFd(audioFile) // relative path to assets folder
-        // split into 3 second chunks - 3 * sample rate
-        val audioStream = birdcall.createInputStream()   // Create File input stream from path
-        val audioBytes  = ByteArray(sampleRate * 3 * (bitRate/8)) // 3 seconds worth of audio bytes
-        val output: ArrayList<ByteArray> = ArrayList()  // all 3 second audio chunks
-
-        val audioFloat = FloatArray(144000)
-        val audioByte = ByteArray(4) // bit rate of 16
-        val byteBuf = allocateDirect(4)
-        byteBuf.order(ByteOrder.nativeOrder())
-        val fpOutput = ArrayList<FloatArray>() // float array output
-
-        // read in audio bytes in 3 second intervals until end of file, truncate any extra
-        var index = 0
-        while (audioStream.read(audioBytes) != -1) {
-            // output.add(audioBytes.clone()) // build ArrayList using deep copy
-            for (i in audioBytes.indices step 2) {
-                byteBuf.put(audioBytes[i])
-                byteBuf.put(audioBytes[i+1])
-                byteBuf.put(0)
-                byteBuf.put(0)
-                audioFloat[index++] = byteBuf.getFloat(0)
-                println(audioFloat[index - 1])
-                byteBuf.clear()
-            }
-            index = 0
-            fpOutput.add(audioFloat.clone())
-        }
-
-        /*
-        var tempFile = File.createTempFile("tmp", ".wav") // create temp mp3 from bytes
-        tempFile.deleteOnExit()                                      // free up file
-        var fileOS = FileOutputStream(tempFile)                      // write audio byte chunks to file
-        fileOS.write(output[0])                                      // write first 3 sec
-        fileOS.close()                                               // close output stream
-        // play file
-        var fileIS = FileInputStream(tempFile) // read from temp file
-        mediaPlayer.reset()
-        mediaPlayer.setDataSource(fileIS.fd)   // set temp file to play from
-        //mediaPlayer.setDataSource(birdcall.fileDescriptor, birdcall.startOffset, birdcall.length)
-        mediaPlayer.prepare()                  // start up audio/speaker
-        mediaPlayer.start()                    // start playing sound
-
-        // convert to 32 bit floating point and return
-        val fpOutput: ArrayList<FloatArray> = ArrayList() // float array output
-        // convert every 3 second byte buffer to float array
-        for (byteBuf in output) {
-            val floatChunk = FloatArray(byteBuf.size) // array of floats from bytes
-            for (i in floatChunk.indices) {
-                floatChunk[i] = byteBuf[i].toShort().toFloat() // convert byte to float
-            }
-            fpOutput.add(floatChunk)
-        }
-         */
-
-        return fpOutput
+        // Call librosa to get audio data in floats - only supports wav files
+        return segmentAudio(JLibrosa().loadAndRead(makeFile(audioFile), sampleRate,-1))
     }
 
-    fun runInterpreter(samples: ArrayList<FloatArray>) {
-        val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 144000), DataType.FLOAT32)
-        val byteBuffer = allocateDirect(144000*4) // 144000 4 byte floats
-        byteBuffer.order(ByteOrder.nativeOrder())        // Format byte order
-        var outputs: Any
-        var outputAsFloatArr: FloatArray
-        var outputString = ""
-        for (chunk in samples) {
-            // fill with values from audio file
-            for (float in chunk) {
-                byteBuffer.putFloat(float)
-            }
-            inputFeature0.loadBuffer(byteBuffer) // initialize buffer
-            // Runs inference using model and gets result.
-            outputs = model.process(inputFeature0)
-            outputAsFloatArr = outputs.outputFeature0AsTensorBuffer.floatArray // format output as tensor buffer
-            // outputAsFloatArr.sortDescending()
-            outputString += message.format("highest confidence", outputAsFloatArr[3336]) + "\n" // test on random value
-            byteBuffer.clear()
-        }
-        display.text = outputString
+    /**
+     * Build array list of all species supported by birdnet
+     */
+    private fun getSpecies() {
+        species = context.assets.open("BirdNET_GLOBAL_3K_V2.2_Labels.txt").bufferedReader().readLines()
     }
 
     /**
@@ -122,34 +142,19 @@ class birdNet (view: TextView,
      */
     fun runTest() {
         // TODO - check for uninitialized model
-//        try {
+        try {
             model = BirdnetGlobal3kV22ModelFp32.newInstance(context) // build interpreter
-            // read in 144,000 floats - 3 seconds of audio sampled at 48kHz
-            val samples = getSamples(pathToBirdCall)                 // get chunks of audio data input
+            getSpecies()
+            // Read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             // Creates tensor buffer for input for inference.
-//            runInterpreter(samples)
+            runInterpreter(getSamples(pathToBirdCall))
+        }
+        catch (e: Exception) {
+            display.text = errorMsg.format(e.message)
+        }
+        finally {
             // Releases model resources if no longer used.
             model.close()
-//        }
-//        catch (e: Exception) {
-//            println(errorMsg.format(e.message))
-//            model.close()
-//        }
-    }
-
-    /**
-     * Activation function taken from birdnet-analyzer code
-     */
-    private fun sigmoid(prediction: Float): Float {
-        var x = prediction
-        // clip data to be between [-15, 15]
-        if (x < -15.0f) {
-            x = -15.0f
         }
-        if (x > 15.0f) {
-            x = 15.0f
-        }
-
-        return (1.0 / (1.0 + kotlin.math.exp(-1.5 * x))).toFloat()// taken from birdnet code
     }
 }
