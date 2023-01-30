@@ -21,15 +21,15 @@ import com.jlibrosa.audio.JLibrosa
 
 class birdNet (view: TextView,
                ctx: Context) {
-    private val pathToBirdCall = "MountainChickadee.wav" // Audio file with bird call
+    private val pathToBirdCall = "Hawk.wav" // Audio file with bird call
     private val errorMsg       = "ERROR: %s\n\n" // Error message on failed model
     private val message        = "%s: %.5f\n"    // Message with model output prediction
     private var sampleRate     = 48000           // Standard sampling rate of audio files
     private val display        = view            // Text label to output to
     private val context        = ctx             // Context/app screen
 
-    private lateinit var species: List<String> // All species
     private lateinit var model: BirdnetGlobal3kV22ModelFp32 // Birdnet interpreter
+    private lateinit var species: List<String>              // All species
 
     /**
      * Creates temporary file of audio data to access for librosa
@@ -141,7 +141,6 @@ class birdNet (view: TextView,
      * Run BirdNet tflite model on downloaded audio file sample
      */
     fun runTest() {
-        // TODO - check for uninitialized model
         try {
             model = BirdnetGlobal3kV22ModelFp32.newInstance(context) // build interpreter
             getSpecies()
