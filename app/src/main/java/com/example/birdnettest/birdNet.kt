@@ -3,7 +3,6 @@ package com.example.birdnettest
 // Android libraries
 import android.content.Context
 import android.widget.TextView
-import android.os.Environment
 
 // java imports
 import java.nio.ByteBuffer.allocateDirect
@@ -19,7 +18,7 @@ import org.tensorflow.lite.DataType
 import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
 import com.jlibrosa.audio.JLibrosa
 
-class birdNet (view: TextView,
+class BirdNet (view: TextView,
                ctx: Context) {
     private val pathToBirdCall = "Hawk.wav" // Audio file with bird call
     private val errorMsg       = "ERROR: %s\n\n" // Error message on failed model
@@ -28,7 +27,7 @@ class birdNet (view: TextView,
     private val display        = view            // Text label to output to
     private val context        = ctx             // Context/app screen
 
-    private lateinit var model: BirdnetGlobal3kV22ModelFp32 // Birdnet interpreter
+    private lateinit var model: BirdnetGlobal3kV22ModelFp32 // BirdNet interpreter
     private lateinit var species: List<String>              // All species
 
     /**
@@ -36,8 +35,12 @@ class birdNet (view: TextView,
      */
     private fun makeFile(audioFile: String): String {
         val birdcall = context.assets.open(audioFile) // Relative path to assets folder
-        // TODO - handle non wav files
+
+
+        // giTODO - handle non wav files
         //      - handle files in external drive/SD card
+
+
         // Read data into temp file to pass to librosa
         val tempFile = File.createTempFile("tmp", ".wav") // Create temp wav from bytes
         tempFile.deleteOnExit()                                      // Free up file
@@ -72,7 +75,7 @@ class birdNet (view: TextView,
     }
 
     /**
-     * Activation function taken from birdnet-analyzer code
+     * Activation function taken from BirdNet-analyzer code
      */
     private fun sigmoid(prediction: Float): Float {
         return (1.0 / (1.0 + kotlin.math.exp(-1.5 * prediction.coerceIn(-15.0f, 15.0f)))).toFloat()
@@ -84,6 +87,7 @@ class birdNet (view: TextView,
     private fun buildString(confidences: FloatArray): String {
         var outputString = ""
         val topFive = confidences.sortedArrayDescending().copyOfRange(0, 5) // Get 5 highest confidences
+
         // Build string with 5 highest confidences and corresponding species
         for (confidence in topFive) {
             val index = confidences.indexOfFirst{it == confidence}
@@ -93,17 +97,20 @@ class birdNet (view: TextView,
     }
 
     /**
-     * Run Birdnet on audio samples and return array of confidences
+     * Run BirdNet on audio samples and return array of confidences
      */
     private fun getConfidences(samples: FloatArray): FloatArray {
         // Fill with values from audio file
         val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 144000), DataType.FLOAT32)
         val byteBuffer = allocateDirect(144000*4) // 144000 4 byte floats
         byteBuffer.order(ByteOrder.nativeOrder())        // Format byte order
+
         for (float in samples) {
             byteBuffer.putFloat(float)
         }
+
         inputFeature0.loadBuffer(byteBuffer) // initialize buffer
+
         // Runs inference using model and gets output
         return model.process(inputFeature0).outputFeature0AsTensorBuffer.floatArray
     }
@@ -113,25 +120,27 @@ class birdNet (view: TextView,
      */
     private fun runInterpreter(samples: ArrayList<FloatArray>) {
         var outputString = "" // String output to screen
+
         for (i in samples.indices) {
-            outputString += "+++++++++ (%d to %d seconds) ++++++++++\n".format(3*i, 3*i + 3)
+            outputString += "+++++++++ (%d to %d seconds) +++++++++\n".format(3*i, 3*i + 3)
             outputString += buildString(getConfidences(samples[i])) // Get top 5 outputs
-            outputString += "+++++++++++++++++++++++++++++++++\n\n"
+            outputString += "++++++++++++++++++++++++++++++++\n\n"
         }
+
         display.text = outputString
     }
 
     /**
      * Takes an audio file and returns a list of 3 second
-     * audio byte chunks for input to birdnet
+     * audio byte chunks for input to BirdNet
      */
     private fun getSamples(audioFile: String): ArrayList<FloatArray> {
-        // Call librosa to get audio data in floats - only supports wav files
+        // Call JLibrosa to get audio data in floats - only supports wav files
         return segmentAudio(JLibrosa().loadAndRead(makeFile(audioFile), sampleRate,-1))
     }
 
     /**
-     * Build array list of all species supported by birdnet
+     * Build array list of all species supported by BirdNet
      */
     private fun getSpecies() {
         species = context.assets.open("BirdNET_GLOBAL_3K_V2.2_Labels.txt").bufferedReader().readLines()
