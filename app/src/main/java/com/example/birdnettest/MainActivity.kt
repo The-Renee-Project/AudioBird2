@@ -1,11 +1,10 @@
 package com.example.birdnettest
 
+import android.opengl.Visibility
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Button
-import android.widget.ProgressBar
-import android.widget.TextView
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.birdnettest.ui.main.MainFragment
 import kotlin.math.ceil
@@ -35,10 +34,32 @@ class MainActivity : AppCompatActivity() {
         }
 
         // dropdown size is size of data
+        var secondsList = arrayListOf<String>();
 
-        for (i in data.indices) {
-            updateViewsAndBars(data[i]) // Get top 5 outputs
+        for(i in 0..data.size step 3) {
+            val start = i+1
+            val end = i+3
+            secondsList.add("$start-$end s")
         }
+
+        var spinner : Spinner = findViewById(R.id.spinner);
+
+        var arrayAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, secondsList);
+        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.adapter = arrayAdapter
+
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                updateViewsAndBars(data[position])
+            }
+
+            override fun onNothingSelected(p0: AdapterView<*>?) { }
+        }
+
+        spinner.visibility = View.VISIBLE
+
+        // default to first 3 seconds of data shown
+        updateViewsAndBars(data[0])
     }
 
     private fun updateViewsAndBars(confidences: ArrayList<Pair<String,Float>>) {
@@ -46,8 +67,8 @@ class MainActivity : AppCompatActivity() {
         val progressBars = getBars()
 
         confidences.forEachIndexed { i, element ->
-            Log.d("CONFIDENCE", element.first);
-            Log.d("BIRD", element.second.toString());
+//            Log.d("CONFIDENCE", element.first);
+//            Log.d("BIRD", element.second.toString());
             textViews[i].text = element.first
             progressBars[i].progress = (ceil(element.second * 100)).toInt()
             textViews[i].visibility = View.VISIBLE

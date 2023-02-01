@@ -22,7 +22,7 @@ import java.nio.ByteBuffer.allocateDirect
 import java.nio.ByteOrder
 
 class BirdNet (ctx: Context) {
-    private val pathToBirdCall = "Owl.wav" // Audio file with bird call
+    private val pathToBirdCall = "soundscape.wav" // Audio file with bird call
     private val errorMsg       = "ERROR: %s\n\n" // Error message on failed model
     private val message        = "%s: %.5f\n"    // Message with model output prediction
     private var sampleRate     = 48000           // Standard sampling rate of audio files
