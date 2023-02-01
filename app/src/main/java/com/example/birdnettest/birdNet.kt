@@ -1,34 +1,35 @@
 package com.example.birdnettest
 
 // Android libraries
-import android.content.Context
-import android.widget.TextView
 
 // java imports
-import java.nio.ByteBuffer.allocateDirect
-import java.io.FileOutputStream
-import java.nio.ByteOrder
-import java.io.File
 
 // tensorflow libraries
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import org.tensorflow.lite.DataType
 
 // External Libraries
+import android.content.Context
+import android.util.Log
+import android.view.View
+import android.widget.ProgressBar
+import android.widget.TextView
 import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
 import com.jlibrosa.audio.JLibrosa
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer.allocateDirect
+import java.nio.ByteOrder
 
-class BirdNet (view: TextView,
-               ctx: Context) {
-    private val pathToBirdCall = "Hawk.wav" // Audio file with bird call
+class BirdNet (ctx: Context) {
+    private val pathToBirdCall = "Owl.wav" // Audio file with bird call
     private val errorMsg       = "ERROR: %s\n\n" // Error message on failed model
     private val message        = "%s: %.5f\n"    // Message with model output prediction
     private var sampleRate     = 48000           // Standard sampling rate of audio files
-    private val display        = view            // Text label to output to
     private val context        = ctx             // Context/app screen
 
     private lateinit var model: BirdnetGlobal3kV22ModelFp32 // BirdNet interpreter
-    private lateinit var species: List<String>              // All species
+    lateinit var species: List<String>              // All species
 
     /**
      * Creates temporary file of audio data to access for librosa
@@ -37,7 +38,7 @@ class BirdNet (view: TextView,
         val birdcall = context.assets.open(audioFile) // Relative path to assets folder
 
 
-        // giTODO - handle non wav files
+        // TODO - handle non wav files
         //      - handle files in external drive/SD card
 
 
@@ -84,15 +85,19 @@ class BirdNet (view: TextView,
     /**
      * Get string with 5 highest confidence species
      */
-    private fun buildString(confidences: FloatArray): String {
-        var outputString = ""
+    private fun generateDataPair(confidences: FloatArray): ArrayList<Pair<String,Float>> {
+        var outputString = arrayListOf<Pair<String,Float>>()
+
         val topFive = confidences.sortedArrayDescending().copyOfRange(0, 5) // Get 5 highest confidences
 
         // Build string with 5 highest confidences and corresponding species
         for (confidence in topFive) {
             val index = confidences.indexOfFirst{it == confidence}
-            outputString += message.format(species[index], sigmoid(confidence))
+            Log.d("CONFIDENCE", sigmoid(confidence).toString());
+            Log.d("BIRD", species[index]);
+            outputString.add(Pair(species[index], sigmoid(confidence)))
         }
+
         return outputString
     }
 
@@ -118,16 +123,14 @@ class BirdNet (view: TextView,
     /**
      * Calls BirdNet on given samples of audio and prints top confidences to screen
      */
-    private fun runInterpreter(samples: ArrayList<FloatArray>) {
-        var outputString = "" // String output to screen
+    private fun runInterpreter(samples: ArrayList<FloatArray>) : ArrayList<ArrayList<Pair<String,Float>>> {
+        var result = arrayListOf<ArrayList<Pair<String,Float>>>()
 
         for (i in samples.indices) {
-            outputString += "+++++++++ (%d to %d seconds) +++++++++\n".format(3*i, 3*i + 3)
-            outputString += buildString(getConfidences(samples[i])) // Get top 5 outputs
-            outputString += "++++++++++++++++++++++++++++++++\n\n"
+            result.add(generateDataPair(getConfidences(samples[i]))) // Get top 5 outputs
         }
 
-        display.text = outputString
+        return result
     }
 
     /**
@@ -142,27 +145,32 @@ class BirdNet (view: TextView,
     /**
      * Build array list of all species supported by BirdNet
      */
-    private fun getSpecies() {
+    fun getSpecies() {
         species = context.assets.open("BirdNET_GLOBAL_3K_V2.2_Labels.txt").bufferedReader().readLines()
     }
 
     /**
      * Run BirdNet tflite model on downloaded audio file sample
      */
-    fun runTest() {
+    fun runTest() : ArrayList<ArrayList<Pair<String,Float>>>? {
+        var data: ArrayList<ArrayList<Pair<String,Float>>>? = null
+
         try {
             model = BirdnetGlobal3kV22ModelFp32.newInstance(context) // build interpreter
             getSpecies()
+
             // Read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             // Creates tensor buffer for input for inference.
-            runInterpreter(getSamples(pathToBirdCall))
+            data = runInterpreter(getSamples(pathToBirdCall))
         }
         catch (e: Exception) {
-            display.text = errorMsg.format(e.message)
+            // display.text = errorMsg.format(e.message)
         }
         finally {
             // Releases model resources if no longer used.
             model.close()
+
+            return data
         }
     }
 }
