@@ -36,9 +36,9 @@ class MainActivity : AppCompatActivity() {
         // dropdown size is size of data
         var secondsList = arrayListOf<String>();
 
-        for(i in 0..data.size step 3) {
-            val start = i+1
-            val end = i+3
+        for(i in data.indices) {
+            val start = 3*i
+            val end = start+3
             secondsList.add("$start-$end s")
         }
 
