@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.birdnettest"
-        minSdk 21
+        minSdk 24
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -54,4 +54,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
     implementation 'org.tensorflow:tensorflow-lite:2.11.0'
+    implementation 'com.arthenica:ffmpeg-kit-full:5.1'
 }
