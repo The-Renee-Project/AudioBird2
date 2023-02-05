@@ -1,8 +1,7 @@
 package com.example.birdnettest
 
-import android.opengl.Visibility
 import android.os.Bundle
-import android.util.Log
+import android.os.Environment
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -12,6 +11,7 @@ import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
     private lateinit var myBird: BirdNet
+    private val pathToBirdCall = "birds-chirping.mp3" // Audio file with bird call
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,13 +24,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         myBird = BirdNet(applicationContext)
+        //runBirdNet(view)
     }
 
     fun runBirdNet(view: View){
-        var data = myBird.runTest()
+        // Reads/Writes audio file from Downloads folder
+        val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + pathToBirdCall
+        val data = myBird.runTest(path)
 
-        if(data == null) {
-            return;
+        if(data == null || data.size == 0) {
+            return
         }
 
         // dropdown size is size of data
@@ -67,8 +70,6 @@ class MainActivity : AppCompatActivity() {
         val progressBars = getBars()
 
         confidences.forEachIndexed { i, element ->
-//            Log.d("CONFIDENCE", element.first);
-//            Log.d("BIRD", element.second.toString());
             textViews[i].text = element.first
             progressBars[i].progress = (ceil(element.second * 100)).toInt()
             textViews[i].visibility = View.VISIBLE
@@ -79,24 +80,24 @@ class MainActivity : AppCompatActivity() {
     private fun getViews(): ArrayList<TextView> {
         var views = arrayListOf<TextView>()
 
-        views.add(findViewById(R.id.confidenceOne));
-        views.add(findViewById(R.id.confidenceTwo));
-        views.add(findViewById(R.id.confidenceThree));
-        views.add(findViewById(R.id.confidenceFour));
-        views.add(findViewById(R.id.confidenceFive));
+        views.add(findViewById(R.id.confidenceOne))
+        views.add(findViewById(R.id.confidenceTwo))
+        views.add(findViewById(R.id.confidenceThree))
+        views.add(findViewById(R.id.confidenceFour))
+        views.add(findViewById(R.id.confidenceFive))
 
-        return views;
+        return views
     }
 
     private fun getBars(): ArrayList<ProgressBar> {
         var bars = arrayListOf<ProgressBar>()
 
-        bars.add(findViewById(R.id.determinateBarOne));
-        bars.add(findViewById(R.id.determinateBarTwo));
-        bars.add(findViewById(R.id.determinateBarThree));
-        bars.add(findViewById(R.id.determinateBarFour));
-        bars.add(findViewById(R.id.determinateBarFive));
+        bars.add(findViewById(R.id.determinateBarOne))
+        bars.add(findViewById(R.id.determinateBarTwo))
+        bars.add(findViewById(R.id.determinateBarThree))
+        bars.add(findViewById(R.id.determinateBarFour))
+        bars.add(findViewById(R.id.determinateBarFive))
 
-        return bars;
+        return bars
     }
 }
