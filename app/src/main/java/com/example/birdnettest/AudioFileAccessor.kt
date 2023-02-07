@@ -14,6 +14,9 @@ class AudioFileAccessor {
         val data: String,
         val mimeType: String
     )
+    /*
+        make an example code that creates + saves file -> read it
+     */
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
 
@@ -28,9 +31,9 @@ class AudioFileAccessor {
             MediaStore.Audio.Media.MIME_TYPE
         )
 
-        // Select audio files with the wav extension (continue to add on valid types to array)
+        // Select audio files with the mp4 extension (recorded files on AudioMoth end with .mp4)
         val selection = "${MediaStore.Audio.Media.MIME_TYPE} = ?"
-        val selectionArgs = arrayOf("audio/wav") // a files should be in mp4 format in the AudioMoth!
+        val selectionArgs = arrayOf("audio/mp4")
 
         val query = contentResolver.query(
             collection,
