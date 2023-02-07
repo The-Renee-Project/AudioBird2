@@ -6,14 +6,13 @@ import android.net.Uri
 import android.provider.MediaStore
 
 class AudioFileAccessor {
-
     // Container for information about each audio file
     data class AudioFile(
         val uri: Uri, // check if this is needed
         //val id: Long,
         val title: String,
-        val data: String
-        //val mimeType: String
+        val data: String,
+        val mimeType: String
     )
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
@@ -26,11 +25,12 @@ class AudioFileAccessor {
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.MIME_TYPE
         )
 
         // Select audio files with the wav extension (continue to add on valid types to array)
         val selection = "${MediaStore.Audio.Media.MIME_TYPE} = ?"
-        val selectionArgs = arrayOf("audio/wav")
+        val selectionArgs = arrayOf("audio/wav") // a files should be in mp4 format in the AudioMoth!
 
         val query = contentResolver.query(
             collection,
@@ -44,18 +44,20 @@ class AudioFileAccessor {
             val idColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val dataColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val mimeTypeColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
 
             while (it.moveToNext()) {
                 // Get values of column for a given audio file
                 val id = it.getLong(idColumn)
                 val title = it.getString(titleColumn)
                 val data = it.getString(dataColumn)
+                val mimeType = it.getString(mimeTypeColumn)
 
                 val audioUri: Uri = ContentUris.withAppendedId(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
                 )
 
-                audioFiles.add(AudioFile(audioUri, title, data))
+                audioFiles.add(AudioFile(audioUri, title, data, mimeType))
             }
 
             it.close()
