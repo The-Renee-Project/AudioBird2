@@ -1,6 +1,5 @@
 package com.example.birdnettest
 
-import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.content.pm.PackageManager
 import android.Manifest
 import android.os.Bundle
@@ -23,15 +22,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.container, MainFragment.newInstance())
-                .commitNow()
-        }
-
-        myBird = BirdNet(applicationContext)
-        //runBirdNet(view)
-
         // Check whether or not the application has permission to access files.
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -46,12 +36,27 @@ class MainActivity : AppCompatActivity() {
                 100
             )
         }
+
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.container, MainFragment.newInstance())
+                .commitNow()
+        }
+
+        myBird = BirdNet(applicationContext)
+        //runBirdNet(view)
     }
 
     fun runBirdNet(view: View){
         // Reads/Writes audio file from Downloads folder
+        //val audioFiles = accessAudioFiles()
+        //Log.d("audioFilesCount", audioFiles.size.toString())
+        //val audioFile = audioFiles[0]
+        //val path = audioFile.data
+        //Log.d("AUDIO FILE PATH", path.toString())
         val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + pathToBirdCall
         val data = myBird.runTest(path)
+        //Log.d("data :-)", data.toString())
 
         if(data == null || data.size == 0) {
             return
@@ -122,19 +127,9 @@ class MainActivity : AppCompatActivity() {
         return bars
     }
 
-    private fun accessAudioFiles() {
+    private fun accessAudioFiles(): List<AudioFileAccessor.AudioFile> {
         val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
-        var audioFileText = ""
-        if (audioFiles.isEmpty()) {
-            audioFileText = "No audio files found in the media store."
-        } else {
-            // Loop over each of the audio files retrieved and display the file path on the screen.
-            for (audioFile in audioFiles) {
-                audioFileText += audioFile.data + "\n "
-            }
-        }
-        Log.d("AUDIO FILE TEXT", audioFileText);
+        return audioFileAccessor.getAudioFiles(contentResolver);
     }
 
     // https://developer.android.com/training/permissions/requesting
