@@ -127,6 +127,9 @@ class BirdNet (ctx: Context) {
      * Converts passed file to wav and stores it in the same directory
      */
     private fun toWav(audioFile: String): String {
+        if(audioFile.substring(audioFile.lastIndexOf(".")) == ".wav") {
+            return audioFile
+        }
         val outFile = audioFile.substring(0, audioFile.lastIndexOf(".")) + ".wav"
         val session = FFmpegKit.execute("-y -i %s -ac %d -f wav %s".format(audioFile, 2, outFile))
 
