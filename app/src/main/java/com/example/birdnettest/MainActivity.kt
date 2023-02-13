@@ -16,23 +16,22 @@ import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
     private lateinit var myBird: BirdNet
-    private val pathToBirdCall = "birds-chirping.mp3" // Audio file with bird call
+    private val pathToBirdCall = "Hawk.wav" // Audio file with bird call
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Check whether or not the application has permission to access files.
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
+        myBird = BirdNet(applicationContext) // initialize birdnet
+
+        // Check whether or not the application has permission to read/write files.
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             accessAudioFiles()
         } else {
             // You can directly ask for the permission.
             ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
                 100
             )
         }
@@ -42,9 +41,6 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.container, MainFragment.newInstance())
                 .commitNow()
         }
-
-        myBird = BirdNet(applicationContext)
-        //runBirdNet(view)
     }
 
     fun runBirdNet(view: View){
@@ -129,7 +125,40 @@ class MainActivity : AppCompatActivity() {
 
     private fun accessAudioFiles(): List<AudioFileAccessor.AudioFile> {
         val audioFileAccessor = AudioFileAccessor()
-        return audioFileAccessor.getAudioFiles(contentResolver);
+        val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
+        for (path in audioFiles) {
+            val data = myBird.runTest(path.data)
+            if (data != null && data.size != 0) {
+                // dropdown size is size of data
+                var secondsList = arrayListOf<String>();
+
+                for(i in data.indices) {
+                    val start = 3*i
+                    val end = start+3
+                    secondsList.add("$start-$end s")
+                }
+
+                var spinner : Spinner = findViewById(R.id.spinner);
+
+                var arrayAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, secondsList);
+                arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinner.adapter = arrayAdapter
+
+                spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        updateViewsAndBars(data[position])
+                    }
+
+                    override fun onNothingSelected(p0: AdapterView<*>?) { }
+                }
+
+                spinner.visibility = View.VISIBLE
+
+                // default to first 3 seconds of data shown
+                updateViewsAndBars(data[0])
+            }
+        }
+        return audioFiles
     }
 
     // https://developer.android.com/training/permissions/requesting
@@ -142,7 +171,8 @@ class MainActivity : AppCompatActivity() {
             100 -> {
                 // If request is cancelled, the result arrays are empty.
                 if ((grantResults.isNotEmpty() &&
-                            grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                            grantResults[0] == PackageManager.PERMISSION_GRANTED && // read permission
+                            grantResults[1] == PackageManager.PERMISSION_GRANTED)   // write permission
                 ) {
                     // Permission is granted. Continue the action or workflow
                     // in your app.
