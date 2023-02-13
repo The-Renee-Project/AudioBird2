@@ -4,19 +4,18 @@ import android.content.ContentResolver
 import android.content.ContentUris
 import android.net.Uri
 import android.provider.MediaStore
+import android.util.Log
 
+// Resource used: https://developer.android.com/training/data-storage/shared/media.
 class AudioFileAccessor {
-    // Container for information about each audio file
+
+    // Container for information about each audio file.
     data class AudioFile(
-        val uri: Uri, // check if this is needed
-        //val id: Long,
+        val uri: Uri,
         val title: String,
         val data: String,
         val mimeType: String
     )
-    /*
-        make an example code that creates + saves file -> read it
-     */
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
 
@@ -31,9 +30,10 @@ class AudioFileAccessor {
             MediaStore.Audio.Media.MIME_TYPE
         )
 
-        // Select audio files with the mp4 extension (recorded files on AudioMoth end with .mp4)
+        // Select audio files with the mp4 extension
         val selection = "${MediaStore.Audio.Media.MIME_TYPE} = ?"
-        val selectionArgs = arrayOf("audio/mp4")
+        val selectionArgs =
+            arrayOf("audio/mp4") // MIME type for mp4 files (https://www.mpi.nl/corpus/html/lamus2/apa.html)
 
         val query = contentResolver.query(
             collection,
@@ -43,7 +43,14 @@ class AudioFileAccessor {
             null
         )
 
+        // Add error handling in case the query is null.
+        if (query == null) {
+            Log.e("AudioFileAccessor", "Query returned null.")
+            return audioFiles
+        }
+
         query?.use {
+            // Cache column indices
             val idColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val dataColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
@@ -60,9 +67,10 @@ class AudioFileAccessor {
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
                 )
 
+                // Store column values and contentUri in a local object representing the audio file.
                 audioFiles.add(AudioFile(audioUri, title, data, mimeType))
             }
-
+            Log.d("AudioFileAccessor", "Number of audio files after loop: ${audioFiles.size}")
             it.close()
         }
 
