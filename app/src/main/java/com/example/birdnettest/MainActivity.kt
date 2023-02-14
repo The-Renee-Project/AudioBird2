@@ -62,7 +62,7 @@ class MainActivity : AppCompatActivity() {
         var secondsList = arrayListOf<String>();
 
         for(i in data.indices) {
-            val start = 3*i
+            val start = 3*i+1
             val end = start+3
             secondsList.add("$start-$end s")
         }
