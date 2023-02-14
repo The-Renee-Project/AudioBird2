@@ -3,8 +3,6 @@ package com.example.birdnettest
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Environment
-import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +15,6 @@ import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
     private lateinit var myBird: BirdNet
-    private val pathToBirdCall = "MountainChickadee.wav" // Audio file with bird call
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,69 +41,85 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun runBirdNet(view: View){
+    private fun runBirdNet() {
         // Reads/Writes audio file from Downloads folder
         //val audioFiles = accessAudioFiles()
         //Log.d("audioFilesCount", audioFiles.size.toString())
         //val audioFile = audioFiles[0]
         //val path = audioFile.data
         //Log.d("AUDIO FILE PATH", path.toString())
-        val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + pathToBirdCall
-        val data = myBird.runTest(path)
+        val audioFileAccessor = AudioFileAccessor()
+        val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
+        for (file in audioFiles) {
+            val data = myBird.runTest(file.data)
 
-        if(data == null || data.size == 0) {
-            return
-        }
+            if (data == null || data.size == 0) {
+                return
+            }
 
-        val dir = File(this.filesDir.toString())
+            val dir = File(this.filesDir.toString())
 
-        // dropdown size is size of data
-        var secondsList = arrayListOf<String>();
+            // dropdown size is size of data
+            val secondsList = arrayListOf<String>()
 
-        try {
-            val resultsFile = File(dir, pathToBirdCall.substring(0, pathToBirdCall.indexOf('.'))+"-result.txt")
-            val writer = FileWriter(resultsFile)
+            try {
+                val resultsFile = File(
+                    dir,
+                    file.data.substring(file.data.lastIndexOf("/")+1, file.data.lastIndexOf('.')) + "-result.txt"
+                )
+                val writer = FileWriter(resultsFile)
 
-            for(i in data.indices) {
-                val start = 3*i+1
-                val end = start+2
+                for (i in data.indices) {
+                    val start = 3 * i + 1
+                    val end = start + 2
 
-                secondsList.add("$start-$end s")
-                writer.append("$start-$end\n")
+                    secondsList.add("$start-$end s")
+                    writer.append("$start-$end\n")
 
-                data[i].forEachIndexed { i, element ->
-                    val name: String = element.first
-                    val probability: Float = element.second
+                    data[i].forEachIndexed { _, element ->
+                        val name: String = element.first
+                        val probability: Float = element.second
 
-                    writer.append("$name: $probability\n");
+                        writer.append("$name: $probability\n")
+                    }
                 }
+
+                writer.flush()
+                writer.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return
             }
 
-            writer.flush()
-            writer.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return
-        }
+            val spinner: Spinner = findViewById(R.id.spinner)
 
-        var spinner : Spinner = findViewById(R.id.spinner);
+            val arrayAdapter =
+                ArrayAdapter(this, android.R.layout.simple_spinner_item, secondsList)
+            arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinner.adapter = arrayAdapter
 
-        var arrayAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, secondsList);
-        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.adapter = arrayAdapter
+            spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    adapterView: AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    updateViewsAndBars(data[position])
+                }
 
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                updateViewsAndBars(data[position])
+                override fun onNothingSelected(p0: AdapterView<*>?) {}
             }
 
-            override fun onNothingSelected(p0: AdapterView<*>?) { }
+            spinner.visibility = View.VISIBLE
+
+            // default to first 3 seconds of data shown
+            updateViewsAndBars(data[0])
         }
+    }
 
-        spinner.visibility = View.VISIBLE
-
-        // default to first 3 seconds of data shown
-        updateViewsAndBars(data[0])
+    fun runBirdNet(view: View){
+        runBirdNet()
     }
 
     private fun updateViewsAndBars(confidences: ArrayList<Pair<String,Float>>) {
@@ -122,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getViews(): ArrayList<TextView> {
-        var views = arrayListOf<TextView>()
+        val views = arrayListOf<TextView>()
 
         views.add(findViewById(R.id.confidenceOne))
         views.add(findViewById(R.id.confidenceTwo))
@@ -134,7 +147,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getBars(): ArrayList<ProgressBar> {
-        var bars = arrayListOf<ProgressBar>()
+        val bars = arrayListOf<ProgressBar>()
 
         bars.add(findViewById(R.id.determinateBarOne))
         bars.add(findViewById(R.id.determinateBarTwo))
@@ -145,42 +158,8 @@ class MainActivity : AppCompatActivity() {
         return bars
     }
 
-    private fun accessAudioFiles(): List<AudioFileAccessor.AudioFile> {
-        val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
-        for (path in audioFiles) {
-            val data = myBird.runTest(path.data)
-            if (data != null && data.size != 0) {
-                // dropdown size is size of data
-                var secondsList = arrayListOf<String>();
-
-                for(i in data.indices) {
-                    val start = 3*i
-                    val end = start+3
-                    secondsList.add("$start-$end s")
-                }
-
-                var spinner : Spinner = findViewById(R.id.spinner);
-
-                var arrayAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, secondsList);
-                arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                spinner.adapter = arrayAdapter
-
-                spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        updateViewsAndBars(data[position])
-                    }
-
-                    override fun onNothingSelected(p0: AdapterView<*>?) { }
-                }
-
-                spinner.visibility = View.VISIBLE
-
-                // default to first 3 seconds of data shown
-                updateViewsAndBars(data[0])
-            }
-        }
-        return audioFiles
+    private fun accessAudioFiles() {
+        runBirdNet()
     }
 
     // https://developer.android.com/training/permissions/requesting

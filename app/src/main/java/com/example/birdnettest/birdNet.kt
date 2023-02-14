@@ -142,7 +142,7 @@ class BirdNet (ctx: Context) {
         }
         else {
             // FAILURE
-            Log.d("FAILURE", String.format("Command failed with state %s and rc %s.%s", session.state, session.returnCode, session.failStackTrace));
+            Log.d("FAILURE", "Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}");
         }
         return "KABLOOM!"
     }
