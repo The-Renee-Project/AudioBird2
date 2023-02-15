@@ -1,7 +1,7 @@
 package com.example.birdnettest
 
-import android.content.pm.PackageManager
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
@@ -11,12 +11,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.birdnettest.ui.main.MainFragment
+import java.io.*
 import kotlin.math.ceil
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var myBird: BirdNet
-    private val pathToBirdCall = "Hawk.wav" // Audio file with bird call
+    private val pathToBirdCall = "MountainChickadee.wav" // Audio file with bird call
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,19 +53,40 @@ class MainActivity : AppCompatActivity() {
         //Log.d("AUDIO FILE PATH", path.toString())
         val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + pathToBirdCall
         val data = myBird.runTest(path)
-        //Log.d("data :-)", data.toString())
 
         if(data == null || data.size == 0) {
             return
         }
 
+        val dir = File(this.filesDir.toString())
+
         // dropdown size is size of data
         var secondsList = arrayListOf<String>();
 
-        for(i in data.indices) {
-            val start = 3*i+1
-            val end = start+3
-            secondsList.add("$start-$end s")
+        try {
+            val resultsFile = File(dir, pathToBirdCall.substring(0, pathToBirdCall.indexOf('.'))+"-result.txt")
+            val writer = FileWriter(resultsFile)
+
+            for(i in data.indices) {
+                val start = 3*i+1
+                val end = start+2
+
+                secondsList.add("$start-$end s")
+                writer.append("$start-$end\n")
+
+                data[i].forEachIndexed { i, element ->
+                    val name: String = element.first
+                    val probability: Float = element.second
+
+                    writer.append("$name: $probability\n");
+                }
+            }
+
+            writer.flush()
+            writer.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
         }
 
         var spinner : Spinner = findViewById(R.id.spinner);
