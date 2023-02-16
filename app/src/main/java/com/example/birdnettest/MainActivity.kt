@@ -1,7 +1,6 @@
 package com.example.birdnettest
 
 import android.Manifest
-import android.widget.TextView;
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -10,7 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.birdnettest.ui.main.MainFragment
-import java.io.*
+import java.io.File
+import java.io.FileWriter
 import kotlin.math.ceil
 
 
@@ -59,7 +59,19 @@ class MainActivity : AppCompatActivity() {
         // Reads/Writes audio file from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
+
+        val prefs = getSharedPreferences("last_timestamp", MODE_PRIVATE)
+        val editor = prefs.edit()
+
+        val lastTimestamp = prefs.getString("timestamp", "")
+
         for (file in audioFiles) {
+            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
+                editor.putString("timestamp", file.dateAdded);
+            } else {
+                continue; // skip current audio file
+            }
+
             val data = myBird.runTest(file.data)
 
             if (data == null || data.size == 0) {
