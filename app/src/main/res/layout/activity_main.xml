@@ -10,12 +10,12 @@
 
     <TextView
         android:id="@+id/audioName"
-        android:layout_width="298dp"
-        android:layout_height="29dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:ems="10"
         android:gravity="center"
         android:inputType="textPersonName"
-        android:text="File Name: Hawk.wav"
+        android:text="File Name: "
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.495"

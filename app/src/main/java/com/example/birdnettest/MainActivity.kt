@@ -1,6 +1,7 @@
 package com.example.birdnettest
 
 import android.Manifest
+import android.widget.TextView;
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -15,12 +16,14 @@ import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
     private lateinit var myBird: BirdNet
+    private lateinit var audioName: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         myBird = BirdNet(applicationContext) // initialize birdnet
+        audioName = findViewById(R.id.audioName) // initialize audioName
 
         // Check whether or not the application has permission to read/write files.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
@@ -43,11 +46,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun runBirdNet() {
         // Reads/Writes audio file from Downloads folder
-        //val audioFiles = accessAudioFiles()
-        //Log.d("audioFilesCount", audioFiles.size.toString())
-        //val audioFile = audioFiles[0]
-        //val path = audioFile.data
-        //Log.d("AUDIO FILE PATH", path.toString())
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
         for (file in audioFiles) {
@@ -56,6 +54,8 @@ class MainActivity : AppCompatActivity() {
             if (data == null || data.size == 0) {
                 return
             }
+
+            audioName.text = "File Name: " + file.title
 
             val dir = File(this.filesDir.toString())
 
