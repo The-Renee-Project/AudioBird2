@@ -159,7 +159,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun accessAudioFiles() {
-        runBirdNet()
+        // Commented out so classification is only run when the button is clicked
+        // runBirdNet()
     }
 
     // https://developer.android.com/training/permissions/requesting
