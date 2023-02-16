@@ -26,13 +26,24 @@ class MainActivity : AppCompatActivity() {
         audioName = findViewById(R.id.audioName) // initialize audioName
 
         // Check whether or not the application has permission to read/write files.
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             accessAudioFiles()
         } else {
             // You can directly ask for the permission.
             ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                this,
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ),
                 100
             )
         }
@@ -55,7 +66,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            audioName.text = "File Name: " + file.title
+            audioName.text = "File Name: ${file.title}"
 
             val dir = File(this.filesDir.toString())
 
@@ -65,7 +76,10 @@ class MainActivity : AppCompatActivity() {
             try {
                 val resultsFile = File(
                     dir,
-                    file.data.substring(file.data.lastIndexOf("/")+1, file.data.lastIndexOf('.')) + "-result.txt"
+                    file.data.substring(
+                        file.data.lastIndexOf("/") + 1,
+                        file.data.lastIndexOf('.')
+                    ) + "-result.txt"
                 )
                 val writer = FileWriter(resultsFile)
 
@@ -118,11 +132,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun runBirdNet(view: View){
+    fun runBirdNet(view: View) {
         runBirdNet()
     }
 
-    private fun updateViewsAndBars(confidences: ArrayList<Pair<String,Float>>) {
+    private fun updateViewsAndBars(confidences: ArrayList<Pair<String, Float>>) {
         val textViews = getViews()
         val progressBars = getBars()
 
@@ -159,7 +173,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun accessAudioFiles() {
-        // Commented out so classification is only run when the button is clicked
+        // Commented out so audio classification runs when the button is clicked
         // runBirdNet()
     }
 
