@@ -127,6 +127,9 @@ class BirdNet (ctx: Context) {
      * Converts passed file to wav and stores it in the same directory
      */
     private fun toWav(audioFile: String): String {
+        if(audioFile.substring(audioFile.lastIndexOf(".")) == ".wav") {
+            return audioFile
+        }
         val outFile = audioFile.substring(0, audioFile.lastIndexOf(".")) + ".wav"
         val session = FFmpegKit.execute("-y -i %s -ac %d -f wav %s".format(audioFile, 2, outFile))
 
@@ -139,7 +142,7 @@ class BirdNet (ctx: Context) {
         }
         else {
             // FAILURE
-            Log.d("FAILURE", String.format("Command failed with state %s and rc %s.%s", session.state, session.returnCode, session.failStackTrace));
+            Log.d("FAILURE", "Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}");
         }
         return "KABLOOM!"
     }
