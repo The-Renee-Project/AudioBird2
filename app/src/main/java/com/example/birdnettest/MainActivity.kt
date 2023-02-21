@@ -1,7 +1,6 @@
 package com.example.birdnettest
 
 import android.Manifest
-import android.widget.TextView;
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -9,21 +8,20 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.birdnettest.ui.main.MainFragment
-import java.io.*
-import kotlin.math.ceil
-
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var myBird: BirdNet
-    private lateinit var audioName: TextView
+    private lateinit var util: Util
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        myBird = BirdNet(applicationContext) // initialize birdnet
-        audioName = findViewById(R.id.audioName) // initialize audioName
+        util = Util(applicationContext)
 
         // Check whether or not the application has permission to read/write files.
         if (ContextCompat.checkSelfPermission(
@@ -55,126 +53,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun runBirdNet() {
-        // Reads/Writes audio file from Downloads folder
-        val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(contentResolver)
-        for (file in audioFiles) {
-            val data = myBird.runTest(file.data)
-
-            if (data == null || data.size == 0) {
-                return
-            }
-
-            audioName.text = "File Name: ${file.title}"
-
-            val dir = File(this.filesDir.toString())
-
-            // dropdown size is size of data
-            val secondsList = arrayListOf<String>()
-
-            try {
-                val resultsFile = File(
-                    dir,
-                    file.data.substring(
-                        file.data.lastIndexOf("/") + 1,
-                        file.data.lastIndexOf('.')
-                    ) + "-result.txt"
-                )
-                val writer = FileWriter(resultsFile)
-
-                for (i in data.indices) {
-                    val start = 3 * i + 1
-                    val end = start + 2
-
-                    secondsList.add("$start-$end s")
-                    writer.append("$start-$end\n")
-
-                    data[i].forEachIndexed { _, element ->
-                        val name: String = element.first
-                        val probability: Float = element.second
-
-                        writer.append("$name: $probability\n")
-                    }
-                }
-
-                writer.flush()
-                writer.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return
-            }
-
-            val spinner: Spinner = findViewById(R.id.spinner)
-
-            val arrayAdapter =
-                ArrayAdapter(this, android.R.layout.simple_spinner_item, secondsList)
-            arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinner.adapter = arrayAdapter
-
-            spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    adapterView: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    updateViewsAndBars(data[position])
-                }
-
-                override fun onNothingSelected(p0: AdapterView<*>?) {}
-            }
-
-            spinner.visibility = View.VISIBLE
-
-            // default to first 3 seconds of data shown
-            updateViewsAndBars(data[0])
-        }
-    }
-
     fun runBirdNet(view: View) {
-        runBirdNet()
-    }
+        val bars: Array<ProgressBar> = arrayOf(
+            findViewById(R.id.determinateBarOne),
+            findViewById(R.id.determinateBarTwo),
+            findViewById(R.id.determinateBarThree),
+            findViewById(R.id.determinateBarFour),
+            findViewById(R.id.determinateBarFive)
+        )
 
-    private fun updateViewsAndBars(confidences: ArrayList<Pair<String, Float>>) {
-        val textViews = getViews()
-        val progressBars = getBars()
+        val textViews: Array<TextView> = arrayOf(
+            findViewById(R.id.confidenceOne),
+            findViewById(R.id.confidenceTwo),
+            findViewById(R.id.confidenceThree),
+            findViewById(R.id.confidenceFour),
+            findViewById(R.id.confidenceFive)
+        )
 
-        confidences.forEachIndexed { i, element ->
-            textViews[i].text = element.first
-            progressBars[i].progress = (ceil(element.second * 100)).toInt()
-            textViews[i].visibility = View.VISIBLE
-            progressBars[i].visibility = View.VISIBLE
-        }
-    }
-
-    private fun getViews(): ArrayList<TextView> {
-        val views = arrayListOf<TextView>()
-
-        views.add(findViewById(R.id.confidenceOne))
-        views.add(findViewById(R.id.confidenceTwo))
-        views.add(findViewById(R.id.confidenceThree))
-        views.add(findViewById(R.id.confidenceFour))
-        views.add(findViewById(R.id.confidenceFive))
-
-        return views
-    }
-
-    private fun getBars(): ArrayList<ProgressBar> {
-        val bars = arrayListOf<ProgressBar>()
-
-        bars.add(findViewById(R.id.determinateBarOne))
-        bars.add(findViewById(R.id.determinateBarTwo))
-        bars.add(findViewById(R.id.determinateBarThree))
-        bars.add(findViewById(R.id.determinateBarFour))
-        bars.add(findViewById(R.id.determinateBarFive))
-
-        return bars
+        util.runBirdNet(bars,
+                        textViews,
+                        findViewById(R.id.audioName),
+                        findViewById(R.id.spinner),
+                        applicationContext)
     }
 
     private fun accessAudioFiles() {
         // Commented out so audio classification runs when the button is clicked
-        // runBirdNet()
+        val birdNetWorkRequest = PeriodicWorkRequestBuilder<BirdnetWorker>(1, TimeUnit.DAYS).build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("EXECUTE_DAILY", ExistingPeriodicWorkPolicy.KEEP, birdNetWorkRequest)
     }
 
     // https://developer.android.com/training/permissions/requesting
@@ -187,8 +93,9 @@ class MainActivity : AppCompatActivity() {
             100 -> {
                 // If request is cancelled, the result arrays are empty.
                 if ((grantResults.isNotEmpty() &&
-                            grantResults[0] == PackageManager.PERMISSION_GRANTED && // read permission
-                            grantResults[1] == PackageManager.PERMISSION_GRANTED)   // write permission
+                     grantResults[0] == PackageManager.PERMISSION_GRANTED && // read permission
+                     grantResults[1] == PackageManager.PERMISSION_GRANTED  // write permission
+                     )  // audio media permission
                 ) {
                     // Permission is granted. Continue the action or workflow
                     // in your app.
