@@ -176,12 +176,6 @@ class BirdNet (ctx: Context) {
             // Read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             // Creates tensor buffer for input for inference.
             data = runInterpreter(getSamples(pathToBirdCall))
-            // Delete file after reading
-            val outputFile = pathToBirdCall.substring(0, pathToBirdCall.lastIndexOf(".")) + ".wav"
-            val f = File(outputFile)
-            if (f.exists()) {
-                f.delete()
-            }
         }
         catch (e: Exception) {
             Log.d("ERROR:", e.message.toString())
