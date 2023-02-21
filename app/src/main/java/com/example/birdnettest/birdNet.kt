@@ -25,7 +25,7 @@ class BirdNet (ctx: Context) {
     private val context        = ctx             // Context/app screen
 
     private lateinit var model: BirdnetGlobal3kV22ModelFp32 // BirdNet interpreter
-    lateinit var species: List<String>                      // All species
+    private lateinit var species: List<String>                      // All species
 
     /**
      * Creates temporary file of audio data to access file in assets folder
@@ -67,8 +67,8 @@ class BirdNet (ctx: Context) {
         // Build string with 5 highest confidences and corresponding species
         for (confidence in topFive) {
             val index = confidences.indexOfFirst{it == confidence}
-            Log.d("BIRD", species[index])
-            Log.d("CONFIDENCE", sigmoid(confidence).toString())
+//            Log.d("BIRD", species[index])
+//            Log.d("CONFIDENCE", sigmoid(confidence).toString())
             outputString.add(Pair(species[index], sigmoid(confidence)))
         }
 
@@ -82,7 +82,7 @@ class BirdNet (ctx: Context) {
         // Fill with values from audio file
         val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 144000), DataType.FLOAT32)
         val byteBuffer = allocateDirect(144000*4) // 144000 4 byte floats
-        byteBuffer.order(ByteOrder.nativeOrder())        // Format byte order
+        byteBuffer.order(ByteOrder.nativeOrder()) // Format byte order
 
         for (float in samples) {
             byteBuffer.putFloat(float)
@@ -131,7 +131,7 @@ class BirdNet (ctx: Context) {
             return audioFile
         }
         val outFile = audioFile.substring(0, audioFile.lastIndexOf(".")) + ".wav"
-        val session = FFmpegKit.execute("-y -i %s -ac %d -f wav %s".format(audioFile, 2, outFile))
+        val session = FFmpegKit.execute("-y -i \"$audioFile\" -ac 2 -f wav \"$outFile\"")
 
         if (ReturnCode.isSuccess(session.returnCode)) {
             return outFile
@@ -142,7 +142,7 @@ class BirdNet (ctx: Context) {
         }
         else {
             // FAILURE
-            Log.d("FAILURE", "Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}");
+            Log.d("FAILURE", "Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}")
         }
         return "KABLOOM!"
     }
@@ -159,7 +159,7 @@ class BirdNet (ctx: Context) {
     /**
      * Build array list of all species supported by BirdNet
      */
-    fun getSpecies() {
+    private fun getSpecies() {
         species = context.assets.open("BirdNET_GLOBAL_3K_V2.2_Labels.txt").bufferedReader().readLines()
     }
 
@@ -176,6 +176,12 @@ class BirdNet (ctx: Context) {
             // Read in 144,000 floats - 3 seconds of audio sampled at 48kHz
             // Creates tensor buffer for input for inference.
             data = runInterpreter(getSamples(pathToBirdCall))
+            // Delete file after reading
+            val outputFile = pathToBirdCall.substring(0, pathToBirdCall.lastIndexOf(".")) + ".wav"
+            val f = File(outputFile)
+            if (f.exists()) {
+                f.delete()
+            }
         }
         catch (e: Exception) {
             Log.d("ERROR:", e.message.toString())
@@ -183,7 +189,6 @@ class BirdNet (ctx: Context) {
         finally {
             // Releases model resources if no longer used.
             model.close()
-
             return data
         }
     }
