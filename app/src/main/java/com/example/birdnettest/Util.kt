@@ -14,13 +14,13 @@ class Util (appContext: Context) {
     private val myBird = BirdNet(appContext)
     private val ctx = appContext
 
+    // Run birdnet on found files without outputting to screen
     fun runBirdNet(){
         // Reads/Writes audio file from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
 
         val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
-
         val lastTimestamp = prefs.getString("timestamp", "")
 
         for (file in audioFiles) {
@@ -44,6 +44,7 @@ class Util (appContext: Context) {
         }
     }
 
+    // Run birdnet on found files and output to screen
     fun runBirdNet(progressBars: Array<ProgressBar>,
                    textViews: Array<TextView>,
                    audioName: TextView,
@@ -53,7 +54,21 @@ class Util (appContext: Context) {
         // Reads/Writes audio file from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
+        // shared preferences to make sure we only read new files
+        val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
+        var lastTimestamp = prefs.getString("timestamp", "")
+
         for (file in audioFiles) {
+            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
+                // update shared preference to last file processed
+                with (prefs.edit()) {
+                    putString("timestamp", file.dateAdded)
+                    apply() // asynchronous write to external memory
+                    lastTimestamp = file.dateAdded
+                }
+            } else {
+                continue // already processed file - skip
+            }
             Log.d("FILE NAME:", file.data)
             val data = myBird.runTest(file.data)
 
@@ -67,6 +82,7 @@ class Util (appContext: Context) {
         }
     }
 
+    // save results of birdnet to internal file
     private fun saveToFile(data: ArrayList<ArrayList<Pair<String, Float>>>,
                            secondsList: ArrayList<String>,
                            filesDir: String,
@@ -104,6 +120,7 @@ class Util (appContext: Context) {
         }
     }
 
+    // output results of birdnet to screen
     private fun updateScreen(data: ArrayList<ArrayList<Pair<String, Float>>>,
                              progressBars: Array<ProgressBar>,
                              secondsList: ArrayList<String>,
@@ -135,6 +152,7 @@ class Util (appContext: Context) {
         updateViewsAndBars(data[0], progressBars, textViews)
     }
 
+    // update screen
     private fun updateViewsAndBars(confidences: ArrayList<Pair<String, Float>>,
                                    progressBars: Array<ProgressBar>,
                                    textViews: Array<TextView>)
