@@ -1,6 +1,7 @@
 package com.example.birdnettest
 
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.util.Log
 import android.view.View
 import android.widget.*
@@ -17,8 +18,22 @@ class Util (appContext: Context) {
         // Reads/Writes audio file from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
+
+        val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
+
+        val lastTimestamp = prefs.getString("timestamp", "")
+
         for (file in audioFiles) {
-            Log.d("FILE NAME:", file.data)
+            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
+                // update shared preference to last file processed
+                with (prefs.edit()) {
+                    putString("timestamp", file.dateAdded)
+                    apply() // asynchronous write to external memory
+                }
+            } else {
+                continue // already processed file - skip
+            }
+
             val data = myBird.runTest(file.data)
 
             if (data == null || data.size == 0) {
