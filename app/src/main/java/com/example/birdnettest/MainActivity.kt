@@ -3,6 +3,7 @@ package com.example.birdnettest
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -53,6 +54,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /*
+     * Function associated with button click
+     * runs inference, and outputs results to screen as well as saving to file
+     */
     fun runBirdNet(view: View) {
         val bars: Array<ProgressBar> = arrayOf(
             findViewById(R.id.determinateBarOne),
@@ -77,8 +82,10 @@ class MainActivity : AppCompatActivity() {
                         applicationContext)
     }
 
+    /*
+     * After checking for permissions starts periodic task to run app
+     */
     private fun accessAudioFiles() {
-        // Commented out so audio classification runs when the button is clicked
         val birdNetWorkRequest = PeriodicWorkRequestBuilder<BirdnetWorker>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("EXECUTE_DAILY", ExistingPeriodicWorkPolicy.KEEP, birdNetWorkRequest)
     }

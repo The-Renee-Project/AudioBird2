@@ -28,29 +28,6 @@ class BirdNet (ctx: Context) {
     private lateinit var species: List<String>                      // All species
 
     /**
-     * Creates temporary file of audio data to access file in assets folder
-     */
-    private fun makeFile(audioFile: String): String {
-        val birdcall = context.assets.open(audioFile) // Relative path to assets folder
-
-        // Read data into temp file to pass to librosa
-        val tempFile = File.createTempFile("tmp", ".wav") // Create temp wav from bytes
-        tempFile.deleteOnExit()                                      // Free up file
-        val fileOS = FileOutputStream(tempFile)                      // Write audio byte chunks to file
-        var byte: Int // Read in single bytes to make sure we get whole file
-        while (true) {
-            byte = birdcall.read() // Read in a single byte
-            // Stop when end of file
-            if (byte == -1) {break}
-            fileOS.write(byte)
-        }
-        birdcall.close() // Close reference to file
-        fileOS.close()   // Close output stream
-
-        return tempFile.absolutePath
-    }
-
-    /**
      * Activation function taken from BirdNet-analyzer code
      */
     private fun sigmoid(prediction: Float): Float {
@@ -67,8 +44,6 @@ class BirdNet (ctx: Context) {
         // Build string with 5 highest confidences and corresponding species
         for (confidence in topFive) {
             val index = confidences.indexOfFirst{it == confidence}
-//            Log.d("BIRD", species[index])
-//            Log.d("CONFIDENCE", sigmoid(confidence).toString())
             outputString.add(Pair(species[index], sigmoid(confidence)))
         }
 

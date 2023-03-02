@@ -6,9 +6,11 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 
 class BirdnetWorker (appContext: Context, workerParams: WorkerParameters): Worker(appContext, workerParams) {
-    private val ctx = appContext
-    private val util = Util(ctx)
+    private val util = Util(appContext)
 
+    /*
+     * Function that is run by task scheduler
+     */
     override fun doWork(): Result {
         // run birdnet inference
         Log.d("TASK:", "Task ran!")

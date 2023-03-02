@@ -95,24 +95,24 @@ class Util (appContext: Context) {
                 path.substring(
                     path.lastIndexOf("/") + 1,
                     path.lastIndexOf('.')
-                ) + "-result.txt"
+                ) + "-result.csv"
             )
             val writer = FileWriter(resultsFile)
+            // csv file format
+            writer.append("start_of_interval,end_of_interval,species,confidence\n")
 
             for (i in data.indices) {
                 val start = 3 * i + 1
                 val end = start + 2
 
                 secondsList.add("$start-$end s")
-                writer.append("$start-$end\n")
 
                 data[i].forEachIndexed { _, element ->
                     val name: String = element.first
                     val probability: Float = element.second
-                    writer.append("$name: $probability\n")
+                    writer.append("$start,$end,$name,$probability\n")
                 }
             }
-
             writer.flush()
             writer.close()
         } catch (e: Exception) {
