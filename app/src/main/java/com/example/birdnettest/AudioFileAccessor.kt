@@ -14,7 +14,8 @@ class AudioFileAccessor {
         val uri: Uri,
         val title: String,
         val data: String,
-        val mimeType: String
+        val mimeType: String,
+        val dateAdded: String
     )
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
@@ -27,7 +28,8 @@ class AudioFileAccessor {
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.MIME_TYPE
+            MediaStore.Audio.Media.MIME_TYPE,
+            MediaStore.Audio.Media.DATE_ADDED
         )
 
         // Select audio files with the mp4 extension
@@ -55,6 +57,7 @@ class AudioFileAccessor {
             val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val dataColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             val mimeTypeColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+            val dateAddedColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
 
             while (it.moveToNext()) {
                 // Get values of column for a given audio file
@@ -62,14 +65,14 @@ class AudioFileAccessor {
                 val title = it.getString(titleColumn)
                 val data = it.getString(dataColumn)
                 val mimeType = it.getString(mimeTypeColumn)
+                val dateAdded = it.getString(dateAddedColumn)
 
                 val audioUri: Uri = ContentUris.withAppendedId(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
                 )
 
                 // Store column values and contentUri in a local object representing the audio file.
-                audioFiles.add(AudioFile(audioUri, title, data, mimeType))
-            }
+                audioFiles.add(AudioFile(audioUri, title, data, mimeType, dateAdded))            }
             Log.d("AudioFileAccessor", "Number of audio files after loop: ${audioFiles.size}")
             it.close()
         }
