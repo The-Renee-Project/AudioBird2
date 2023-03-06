@@ -19,6 +19,19 @@ class AudioFileAccessor {
     )
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
+        // Copies files from AudioMoth's storage to external storage in the Download folder
+        try {
+            val proc = Runtime.getRuntime().exec(
+                arrayOf(
+                    "su",
+                    "-c",
+                    "cp -r /data/user/0/org.nativescript.AudioMoth9/files /sdcard/Download "
+                )
+            )
+            proc.waitFor()
+        } catch (e: Exception) {
+            Log.d("Exceptions", "Exception: $e")
+        }
 
         val audioFiles = mutableListOf<AudioFile>()
 
