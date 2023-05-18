@@ -18,6 +18,15 @@ import java.util.concurrent.TimeUnit
 class MainActivity : AppCompatActivity() {
     private lateinit var util: Util
 
+    // Array of all permissions to request
+    private val PERMISSIONS = listOf(
+        Manifest.permission.READ_MEDIA_AUDIO,
+        Manifest.permission.READ_MEDIA_VIDEO,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.MANAGE_EXTERNAL_STORAGE
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -25,24 +34,13 @@ class MainActivity : AppCompatActivity() {
         util = Util(applicationContext)
 
         // Check whether or not the application has permission to read/write files.
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            accessAudioFiles()
+        if (hasPermissions(PERMISSIONS)) {
+            runBirdNetDaily()
         } else {
             // You can directly ask for the permission.
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ),
+                PERMISSIONS.toTypedArray(),
                 100
             )
         }
@@ -52,6 +50,20 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.container, MainFragment.newInstance())
                 .commitNow()
         }
+    }
+
+    /*
+     * Check that all permissions have been granted
+     */
+    private fun hasPermissions(permissions: List<String>): Boolean {
+        var allGranted = true
+        for (permission in permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_DENIED) {
+                Log.d("Permission denied", permission)
+                allGranted = false
+            }
+        }
+        return allGranted
     }
 
     /*
@@ -85,12 +97,15 @@ class MainActivity : AppCompatActivity() {
     /*
      * After checking for permissions starts periodic task to run app
      */
-    private fun accessAudioFiles() {
+    private fun runBirdNetDaily() {
         val birdNetWorkRequest = PeriodicWorkRequestBuilder<BirdnetWorker>(1, TimeUnit.DAYS).build()
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("EXECUTE_DAILY", ExistingPeriodicWorkPolicy.KEEP, birdNetWorkRequest)
     }
 
     // https://developer.android.com/training/permissions/requesting
+    /*
+     * Request runtime permission from array
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>, grantResults: IntArray
@@ -99,28 +114,20 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             100 -> {
                 // If request is cancelled, the result arrays are empty.
-                if ((grantResults.isNotEmpty() &&
-                     grantResults[0] == PackageManager.PERMISSION_GRANTED && // read permission
-                     grantResults[1] == PackageManager.PERMISSION_GRANTED  // write permission
-                     )  // audio media permission
-                ) {
-                    // Permission is granted. Continue the action or workflow
-                    // in your app.
-                    accessAudioFiles()
-                } else {
-                    // Explain to the user that the feature is unavailable because
-                    // the feature requires a permission that the user has denied.
-                    // At the same time, respect the user's decision. Don't link to
-                    // system settings in an effort to convince the user to change
-                    // their decision.
+                if (grantResults.isNotEmpty()) {
+                    var denied = false
+                    for (i in grantResults.indices) {
+                        // Permission has been denied
+                        if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                            Log.d("Permission denied", permissions[i])
+                            denied = true
+                        }
+                    }
+                    // If all permissions are granted start background task
+                    if (!denied) {
+                        runBirdNetDaily()
+                    }
                 }
-                return
-            }
-
-            // Add other 'when' lines to check for other
-            // permissions this app might request.
-            else -> {
-                // Ignore all other requests.
             }
         }
     }

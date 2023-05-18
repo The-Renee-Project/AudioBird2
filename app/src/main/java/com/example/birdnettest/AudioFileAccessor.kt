@@ -25,7 +25,7 @@ class AudioFileAccessor {
                 arrayOf(
                     "su",
                     "-c",
-                    "cp -r /data/user/0/org.nativescript.AudioMoth9/files /sdcard/Download "
+                    "cp -r /data/user/0/org.nativescript.AudioMoth9/files /sdcard/Download"
                 )
             )
             proc.waitFor()

@@ -6,7 +6,6 @@ import android.util.Log
 
 // java imports
 import java.nio.ByteBuffer.allocateDirect
-import java.io.FileOutputStream
 import java.nio.ByteOrder
 import java.io.File
 
@@ -102,24 +101,19 @@ class BirdNet (ctx: Context) {
      * Converts passed file to wav and stores it in the same directory
      */
     private fun toWav(audioFile: String): String {
-        if(audioFile.substring(audioFile.lastIndexOf(".")) == ".wav") {
-            return audioFile
-        }
-        val outFile = audioFile.substring(0, audioFile.lastIndexOf(".")) + ".wav"
-        val session = FFmpegKit.execute("-y -i \"$audioFile\" -ac 2 -f wav \"$outFile\"")
-
-        if (ReturnCode.isSuccess(session.returnCode)) {
+        val outFile = audioFile.substring(0, audioFile.lastIndexOf("/")) +
+                      audioFile.substring(audioFile.lastIndexOf("/") + 1, audioFile.lastIndexOf(".")) + ".wav"
+        // Do not process file if it already exists
+        val file = File(outFile)
+        if (file.exists()) {
             return outFile
         }
-        else if (ReturnCode.isCancel(session.returnCode)) {
-            // CANCEL
-            Log.d("CANCELED", "Command failed to finish executing because it was canceled")
+
+        val session = FFmpegKit.execute("-y -i \"$audioFile\" -f wav \"$outFile\"")
+        if (!ReturnCode.isSuccess(session.returnCode)) {
+            throw Exception("Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}")
         }
-        else {
-            // FAILURE
-            Log.d("FAILURE", "Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}")
-        }
-        return "KABLOOM!"
+        return outFile
     }
 
     /**
@@ -158,7 +152,7 @@ class BirdNet (ctx: Context) {
         finally {
             // Releases model resources if no longer used.
             model.close()
-            return data
         }
+        return data
     }
 }

@@ -35,7 +35,6 @@ class Util (appContext: Context) {
             }
 
             val data = myBird.runTest(file.data)
-
             if (data == null || data.size == 0) {
                 return
             }
@@ -69,6 +68,7 @@ class Util (appContext: Context) {
             } else {
                 continue // already processed file - skip
             }
+
             Log.d("FILE NAME:", file.data)
             val data = myBird.runTest(file.data)
 
@@ -77,7 +77,7 @@ class Util (appContext: Context) {
             }
             audioName.text = "File Name: ${file.title}" // print file title being processed
             val secondsList = arrayListOf<String>()     // build list of chunks for seconds
-            saveToFile(data, secondsList, ctx.filesDir.toString(), file.data)    // save results from data to file
+            saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
             updateScreen(data, progressBars, secondsList, textViews, ctx, spinner) // print results to phone screen
         }
     }
@@ -89,32 +89,15 @@ class Util (appContext: Context) {
                            path: String)
     {
         try {
-            val dir = File(filesDir)
-            val resultsFile = File(
-                dir,
-                path.substring(
-                    path.lastIndexOf("/") + 1,
-                    path.lastIndexOf('.')
-                ) + "-result.csv"
-            )
-            val writer = FileWriter(resultsFile)
-            // csv file format
-            writer.append("start_of_interval,end_of_interval,species,confidence\n")
-
-            for (i in data.indices) {
-                val start = 3 * i + 1
-                val end = start + 2
-
-                secondsList.add("$start-$end s")
-
-                data[i].forEachIndexed { _, element ->
-                    val name: String = element.first
-                    val probability: Float = element.second
-                    writer.append("$start,$end,$name,$probability\n")
+            File("$filesDir/$path-result.csv").printWriter().use { out ->
+                out.println("start_of_interval,end_of_interval,species,confidence")
+                for (index in data.indices) {
+                    secondsList.add("${3*index}-${3*index + 3} s")
+                    data[index].forEachIndexed { _, element ->
+                        out.println("${3*index}, ${3*index + 3}, ${element.first}, ${element.second}")
+                    }
                 }
             }
-            writer.flush()
-            writer.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
