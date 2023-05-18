@@ -58,7 +58,7 @@ class Util (appContext: Context) {
         var lastTimestamp = prefs.getString("timestamp", "")
 
         for (file in audioFiles) {
-            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
+            /*if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
                 // update shared preference to last file processed
                 with (prefs.edit()) {
                     putString("timestamp", file.dateAdded)
@@ -67,7 +67,7 @@ class Util (appContext: Context) {
                 }
             } else {
                 continue // already processed file - skip
-            }
+            }*/
 
             Log.d("FILE NAME:", file.data)
             val data = myBird.runTest(file.data)

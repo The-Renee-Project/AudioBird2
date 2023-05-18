@@ -20,7 +20,7 @@ class AudioFileAccessor {
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
         // Copies files from AudioMoth's storage to external storage in the Download folder
-        try {
+        /*try {
             val proc = Runtime.getRuntime().exec(
                 arrayOf(
                     "su",
@@ -31,7 +31,7 @@ class AudioFileAccessor {
             proc.waitFor()
         } catch (e: Exception) {
             Log.d("Exceptions", "Exception: $e")
-        }
+        }*/
 
         val audioFiles = mutableListOf<AudioFile>()
 
@@ -46,15 +46,15 @@ class AudioFileAccessor {
         )
 
         // Select audio files with the mp4 extension
-        val selection = "${MediaStore.Audio.Media.MIME_TYPE} = ?"
-        val selectionArgs =
-            arrayOf("audio/mp4") // MIME type for mp4 files (https://www.mpi.nl/corpus/html/lamus2/apa.html)
+//        val selection = "${MediaStore.Audio.Media.MIME_TYPE} = ?"
+//        val selectionArgs =
+//            arrayOf("audio/mp4") // MIME type for mp4 files (https://www.mpi.nl/corpus/html/lamus2/apa.html)
 
         val query = contentResolver.query(
             collection,
             projection,
-            selection,
-            selectionArgs,
+            null,
+            null,
             null
         )
 
