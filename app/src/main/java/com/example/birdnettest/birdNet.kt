@@ -85,7 +85,7 @@ class BirdNet (ctx: Context) {
      * Segment audio into 3 second chunks, at sample rate 48kHz
      */
     private fun segmentAudio(audioData: FloatArray): ArrayList<FloatArray> {
-        val chunks = FloatArray(144000)  // 3 second chunks
+        val chunks = FloatArray(144000)  // 3 second chunks - 144000
         val output = ArrayList<FloatArray>() // Arraylist of all chunks
         // Read in chunks from audio file
         for (i in audioData.indices step 144000) {
@@ -122,7 +122,9 @@ class BirdNet (ctx: Context) {
      */
     private fun getSamples(audioFile: String): ArrayList<FloatArray> {
         // Call JLibrosa to get audio data in floats
-        return segmentAudio(JLibrosa().loadAndRead(toWav(audioFile), sampleRate,-1))
+        //return segmentAudio(JLibrosa().loadAndRead(toWav(audioFile), sampleRate,-1))
+        return segmentAudio(JLibrosa().loadAndRead(audioFile, sampleRate,-1))
+
     }
 
     /**
