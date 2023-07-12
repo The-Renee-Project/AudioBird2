@@ -20,7 +20,7 @@ class AudioFileAccessor {
 
     fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
         // Copies files from AudioMoth's storage to external storage in the Download folder
-        /*try {
+        try {
             val proc = Runtime.getRuntime().exec(
                 arrayOf(
                     "su",
@@ -31,7 +31,7 @@ class AudioFileAccessor {
             proc.waitFor()
         } catch (e: Exception) {
             Log.d("Exceptions", "Exception: $e")
-        }*/
+        }
 
         val audioFiles = mutableListOf<AudioFile>()
 
@@ -64,7 +64,7 @@ class AudioFileAccessor {
             return audioFiles
         }
 
-        query?.use {
+        query.use {
             // Cache column indices
             val idColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
@@ -80,12 +80,15 @@ class AudioFileAccessor {
                 val mimeType = it.getString(mimeTypeColumn)
                 val dateAdded = it.getString(dateAddedColumn)
 
+                Log.d("FILE NAME", title)
+
                 val audioUri: Uri = ContentUris.withAppendedId(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
                 )
 
                 // Store column values and contentUri in a local object representing the audio file.
-                audioFiles.add(AudioFile(audioUri, title, data, mimeType, dateAdded))            }
+                audioFiles.add(AudioFile(audioUri, title, data, mimeType, dateAdded))
+            }
             Log.d("AudioFileAccessor", "Number of audio files after loop: ${audioFiles.size}")
             it.close()
         }

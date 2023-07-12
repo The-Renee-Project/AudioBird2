@@ -11,6 +11,7 @@ import java.io.File
 
 // tensorflow libraries
 import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
+import com.example.birdnettest.ml.BirdnetGlobal6kV24ModelFp32
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.DataType
 
@@ -23,7 +24,7 @@ class BirdNet (ctx: Context) {
     private var sampleRate     = 48000           // Standard sampling rate of audio files
     private val context        = ctx             // Context/app screen
 
-    private lateinit var model: BirdnetGlobal3kV22ModelFp32 // BirdNet interpreter
+    private lateinit var model: BirdnetGlobal6kV24ModelFp32 // BirdNet interpreter
     private lateinit var species: List<String>                      // All species
 
     /**
@@ -38,6 +39,7 @@ class BirdNet (ctx: Context) {
      */
     private fun generateDataPair(confidences: FloatArray): ArrayList<Pair<String,Float>> {
         val outputString = arrayListOf<Pair<String,Float>>()
+
         val topFive = confidences.sortedArrayDescending().copyOfRange(0, 5) // Get 5 highest confidences
 
         // Build string with 5 highest confidences and corresponding species
@@ -102,14 +104,14 @@ class BirdNet (ctx: Context) {
      */
     private fun toWav(audioFile: String): String {
         val outFile = audioFile.substring(0, audioFile.lastIndexOf("/")) +
-                      audioFile.substring(audioFile.lastIndexOf("/") + 1, audioFile.lastIndexOf(".")) + ".wav"
+                      audioFile.substring(audioFile.lastIndexOf("/"), audioFile.lastIndexOf(".")) + ".wav"
         // Do not process file if it already exists
         val file = File(outFile)
         if (file.exists()) {
             return outFile
         }
 
-        val session = FFmpegKit.execute("-y -i \"$audioFile\" -f wav \"$outFile\"")
+        val session = FFmpegKit.execute("-y -i \"$audioFile\" -ar 48000 -f wav \"$outFile\"")
         if (!ReturnCode.isSuccess(session.returnCode)) {
             throw Exception("Command failed with state ${session.state} and rc ${session.returnCode}.${session.failStackTrace}")
         }
@@ -129,7 +131,7 @@ class BirdNet (ctx: Context) {
      * Build array list of all species supported by BirdNet
      */
     private fun getSpecies() {
-        species = context.assets.open("BirdNET_GLOBAL_3K_V2.2_Labels.txt").bufferedReader().readLines()
+        species = context.assets.open("BirdNET_GLOBAL_6K_V2.4_Labels.txt").bufferedReader().readLines()
     }
 
     /**
@@ -139,7 +141,7 @@ class BirdNet (ctx: Context) {
         var data: ArrayList<ArrayList<Pair<String,Float>>>? = null
 
         try {
-            model = BirdnetGlobal3kV22ModelFp32.newInstance(context) // build interpreter
+            model = BirdnetGlobal6kV24ModelFp32.newInstance(context) // build interpreter
             getSpecies() // read list of 3337 species
 
             // Read in 144,000 floats - 3 seconds of audio sampled at 48kHz
