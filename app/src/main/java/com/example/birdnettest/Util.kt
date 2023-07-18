@@ -97,7 +97,6 @@ class Util (appContext: Context) {
                     secondsList.add("${3*index}-${3*index + 3} s")
                     data[index].forEachIndexed { _, element ->
                         out.println("${3*index}, ${3*index + 3}, ${element.first}, ${element.second}")
-                        out.println("${element.second}")
                     }
                 }
             }
