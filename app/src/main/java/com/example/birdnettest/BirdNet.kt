@@ -10,7 +10,6 @@ import java.nio.ByteOrder
 import java.io.File
 
 // tensorflow libraries
-import com.example.birdnettest.ml.BirdnetGlobal3kV22ModelFp32
 import com.example.birdnettest.ml.BirdnetGlobal6kV24ModelFp32
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.DataType
