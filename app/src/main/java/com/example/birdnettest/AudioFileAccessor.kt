@@ -35,7 +35,12 @@ class AudioFileAccessor {
 
         val audioFiles = mutableListOf<AudioFile>()
 
-        val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val collection =
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            } else{
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            }
 
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
