@@ -2,7 +2,6 @@ package com.example.birdnettest
 
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
-import android.util.Log
 import android.view.View
 import android.widget.*
 import java.io.File
@@ -18,7 +17,6 @@ class Util (appContext: Context) {
      * Used by the birdnet worker to run periodically
      */
     fun runBirdNet(){
-        Log.d("Running", "Passed file")
         // Get all audio files from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
@@ -33,11 +31,9 @@ class Util (appContext: Context) {
                 with (prefs.edit()) {
                     putString("timestamp", file.dateAdded)
                     apply() // asynchronous write to external memory
-                    Log.d("Shared Pref", "Already processed")
                 }
 
                 val data = myBird.runTest(file.data)
-                Log.d("Birdnet", "Got data")
                 if (data != null && data.size != 0) {
                     val secondsList = arrayListOf<String>()     // build list of chunks for seconds
                     saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
@@ -56,7 +52,6 @@ class Util (appContext: Context) {
                    spinner: Spinner,
                    ctx: Context)
     {
-        Log.d("Running", "Passed file")
         // Get all audio files from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
@@ -67,7 +62,6 @@ class Util (appContext: Context) {
         for (file in audioFiles) {
             // Only process files if they haven't been processed before, or have been updated
             if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
-                Log.d("Shared Pref", "Already processed")
                 // update shared preference to last file processed
                 with (prefs.edit()) {
                     putString("timestamp", file.dateAdded)
@@ -78,7 +72,6 @@ class Util (appContext: Context) {
                 audioName.text = file.title
                 // Classify birds from audio recording
                 val data = myBird.runTest(file.data)
-                Log.d("Birdnet", "Got data")
                 // Only process data if it exists
                 if (data != null && data.size != 0) {
                     val secondsList = arrayListOf<String>()     // build list of chunks for seconds

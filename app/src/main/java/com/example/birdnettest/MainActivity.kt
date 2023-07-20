@@ -108,7 +108,7 @@ class MainActivity : AppCompatActivity() {
                     // If all permissions are granted start background task
                     if (!denied) {
                         runJobWorkers()
-                    }k
+                    }
                 }
             }
         }
