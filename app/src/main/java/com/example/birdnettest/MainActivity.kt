@@ -1,8 +1,11 @@
 package com.example.birdnettest
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
 import android.util.Log
 import android.view.View
 import android.widget.*
@@ -21,37 +24,112 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        util = Util(applicationContext)
-
-        // Check whether or not the application has permission to read/write files.
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            accessAudioFiles()
-        } else {
-            // You can directly ask for the permission.
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ),
-                100
-            )
-        }
-
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.container, MainFragment.newInstance())
                 .commitNow()
         }
+
+        // Array of all permissions to request
+        // Handle permissions for Android 12 and greater
+        val permissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.READ_MEDIA_AUDIO,
+                Manifest.permission.READ_MEDIA_VIDEO,
+            )
+        } else {
+            // Handle permissions for versions under Android 12
+            arrayOf(
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        }
+        // Request manage external storage permissions for Android 11 or higher
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                startActivity(Intent(ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+            }
+        }
+        // Check whether or not the application has permission to read/write files.
+        if (hasPermissions(permissions)) {
+            runJobWorkers()
+        } else {
+            // You can directly ask for the permission.
+            ActivityCompat.requestPermissions(
+                this,
+                permissions,
+                100
+            )
+        }
+
+        util = Util(applicationContext)
+    }
+
+    /*
+     * Check that all permissions have been granted
+     */
+    private fun hasPermissions(permissions: Array<String>): Boolean {
+        var allGranted = true
+        for (permission in permissions) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    permission
+                ) == PackageManager.PERMISSION_DENIED
+            ) {
+                Log.d("Permission not granted yet", permission)
+                allGranted = false
+            }
+        }
+        return allGranted
+    }
+
+    // https://developer.android.com/training/permissions/requesting
+    /*
+     * Request runtime permission from array
+     */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            100 -> {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.isNotEmpty()) {
+                    var denied = false
+                    for (i in grantResults.indices) {
+                        // Permission has been denied
+                        if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                            Log.d("Permission denied", permissions[i])
+                            denied = true
+                        }
+                    }
+                    // If all permissions are granted start background task
+                    if (!denied) {
+                        runJobWorkers()
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * After checking for permissions starts periodic tasks to run app
+     */
+    private fun runJobWorkers() {
+        // Logger
+        val loggerWorkRequest =
+            PeriodicWorkRequestBuilder<LoggerWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork("LOGGER", ExistingPeriodicWorkPolicy.KEEP, loggerWorkRequest)
+        // BirdNET app
+        val birdNetWorkRequest =
+            PeriodicWorkRequestBuilder<BirdnetWorker>(3, TimeUnit.HOURS).build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "EXECUTE_BIRDNET",
+            ExistingPeriodicWorkPolicy.KEEP,
+            birdNetWorkRequest
+        )
     }
 
     /*
@@ -75,53 +153,12 @@ class MainActivity : AppCompatActivity() {
             findViewById(R.id.confidenceFive)
         )
 
-        util.runBirdNet(bars,
-                        textViews,
-                        findViewById(R.id.audioName),
-                        findViewById(R.id.spinner),
-                        applicationContext)
-    }
-
-    /*
-     * After checking for permissions starts periodic task to run app
-     */
-    private fun accessAudioFiles() {
-        val birdNetWorkRequest = PeriodicWorkRequestBuilder<BirdnetWorker>(1, TimeUnit.DAYS).build()
-        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("EXECUTE_DAILY", ExistingPeriodicWorkPolicy.KEEP, birdNetWorkRequest)
-    }
-
-    // https://developer.android.com/training/permissions/requesting
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>, grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            100 -> {
-                // If request is cancelled, the result arrays are empty.
-                if ((grantResults.isNotEmpty() &&
-                     grantResults[0] == PackageManager.PERMISSION_GRANTED && // read permission
-                     grantResults[1] == PackageManager.PERMISSION_GRANTED  // write permission
-                     )  // audio media permission
-                ) {
-                    // Permission is granted. Continue the action or workflow
-                    // in your app.
-                    accessAudioFiles()
-                } else {
-                    // Explain to the user that the feature is unavailable because
-                    // the feature requires a permission that the user has denied.
-                    // At the same time, respect the user's decision. Don't link to
-                    // system settings in an effort to convince the user to change
-                    // their decision.
-                }
-                return
-            }
-
-            // Add other 'when' lines to check for other
-            // permissions this app might request.
-            else -> {
-                // Ignore all other requests.
-            }
-        }
+        util.runBirdNet(
+            bars,
+            textViews,
+            findViewById(R.id.audioName),
+            findViewById(R.id.spinner),
+            applicationContext
+        )
     }
 }
