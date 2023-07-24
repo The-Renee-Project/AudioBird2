@@ -2,9 +2,15 @@ package com.example.birdnettest
 
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.Context
+import android.media.MediaScannerConnection
+import android.media.MediaScannerConnection.OnScanCompletedListener
 import android.net.Uri
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import java.io.File
+
 
 // Resource used: https://developer.android.com/training/data-storage/shared/media.
 class AudioFileAccessor {
@@ -18,21 +24,7 @@ class AudioFileAccessor {
         val dateAdded: String
     )
 
-    fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
-        // Copies files from AudioMoth's storage to external storage in the Download folder
-        try {
-            val proc = Runtime.getRuntime().exec(
-                arrayOf(
-                    "su",
-                    "-c",
-                    "cp -r /data/user/0/org.nativescript.AudioMoth9/files /sdcard/Download"
-                )
-            )
-            proc.waitFor()
-        } catch (e: Exception) {
-            Log.d("Exceptions", "Exception: $e")
-        }
-
+    private fun queryMediaStore(contentResolver: ContentResolver): List<AudioFile> {
         val audioFiles = mutableListOf<AudioFile>()
 
         var collection =
@@ -47,13 +39,14 @@ class AudioFileAccessor {
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.DATA,
             MediaStore.Audio.Media.MIME_TYPE,
-            MediaStore.Audio.Media.DATE_ADDED
+            MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.DATE_MODIFIED
         )
 
         // Select audio files with the mp4 extension
 //        val selection = "${MediaStore.Audio.MediaStore.Audio.Media.MIME_TYPE} = ?"
 //        val selectionArgs =
-//            arrayOf("video/mp4") // MIME type for mp4 files (https://www.mpi.nl/corpus/html/lamus2/apa.html)
+//            arrayOf("audio/mp4") // MIME type for mp4 files (https://www.mpi.nl/corpus/html/lamus2/apa.html)
 
         var query = contentResolver.query(
             collection,
@@ -163,5 +156,31 @@ class AudioFileAccessor {
 
         Log.d("AudioFileAccessor", "Number of audio files after loop: ${audioFiles.size}")
         return audioFiles
+    }
+
+    private fun refreshMediaStore(contentResolver: ContentResolver, context: Context): List<AudioFile> {
+        val allDownloads = File(Environment.getExternalStorageDirectory().path).list { dir, name -> File(dir, name).isFile }
+        MediaScannerConnection.scanFile(context, allDownloads, null,
+            OnScanCompletedListener { _, _ ->
+                val output = queryMediaStore(contentResolver)
+            })
+        return queryMediaStore(contentResolver)
+    }
+
+    fun getAudioFiles(contentResolver: ContentResolver, context: Context): List<AudioFile> {
+        // Copies files from AudioMoth's storage to external storage in the Download folder
+        try {
+            val proc = Runtime.getRuntime().exec(
+                arrayOf(
+                    "su",
+                    "-c",
+                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
+                )
+            )
+            proc.waitFor()
+        } catch (e: Exception) {
+            Log.d("Exceptions", "Exception: $e")
+        }
+        return refreshMediaStore(contentResolver, context)
     }
 }

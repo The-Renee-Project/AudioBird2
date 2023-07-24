@@ -1,7 +1,8 @@
 package com.example.birdnettest
 
 import android.content.Context
-import android.content.Context.MODE_PRIVATE
+import android.os.Environment
+import android.util.Log
 import android.view.View
 import android.widget.*
 import java.io.File
@@ -16,27 +17,40 @@ class Util (appContext: Context) {
      * Run birdnet on found files without outputting to screen
      * Used by the birdnet worker to run periodically
      */
-    fun runBirdNet(){
+    fun runBirdNet()
+    {
+        // Copy files from internal storage of audiomoth app - requires root
+        try {
+            val proc = Runtime.getRuntime().exec(
+                arrayOf(
+                    "su",
+                    "-c",
+                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
+                )
+            )
+            proc.waitFor()
+        } catch (e: Exception) {
+            Log.d("Exceptions", "Exception: $e")
+        }
         // Get all audio files from Downloads folder
-        val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
-        // shared preferences to make sure we only read new files
-        val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
-        val lastTimestamp = prefs.getString("timestamp", "")
+        val audioFiles = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles {
+                dir, filename ->
+            File(dir, filename).isFile && (filename.endsWith(".aac") ||
+                    filename.endsWith(".wav") ||
+                    filename.endsWith(".mp4"))
+        }
+            ?: return // stop if null or no files found
+        Log.d("Found files", "${audioFiles.size}")
 
         for (file in audioFiles) {
             // Only process files if they haven't been processed before, or have been updated
-            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
-                // update shared preference to last file processed
-                with (prefs.edit()) {
-                    putString("timestamp", file.dateAdded)
-                    apply() // asynchronous write to external memory
-                }
-
-                val data = myBird.runTest(file.data)
+            if (!File(ctx.filesDir.toString(), "${file.nameWithoutExtension}-result.csv").exists()) {
+                // Classify birds from audio recording
+                val data = myBird.runTest(file.absolutePath)
+                // Only process data if it exists
                 if (data != null && data.size != 0) {
                     val secondsList = arrayListOf<String>()     // build list of chunks for seconds
-                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
+                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.nameWithoutExtension)    // save results from data to file
                 }
             }
         }
@@ -52,30 +66,39 @@ class Util (appContext: Context) {
                    spinner: Spinner,
                    ctx: Context)
     {
+        // Copy files from internal storage of audiomoth app - requires root
+        try {
+            val proc = Runtime.getRuntime().exec(
+                arrayOf(
+                    "su",
+                    "-c",
+                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
+                )
+            )
+            proc.waitFor()
+        } catch (e: Exception) {
+            Log.d("Exceptions", "Exception: $e")
+        }
         // Get all audio files from Downloads folder
-        val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
-        // shared preferences to make sure we only read new files
-        val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
-        var lastTimestamp = prefs.getString("timestamp", "")
+        val audioFiles = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles {
+                dir, filename ->
+            File(dir, filename).isFile && (filename.endsWith(".aac") ||
+                                           filename.endsWith(".wav") ||
+                                           filename.endsWith(".mp4"))
+        }
+            ?: return // stop if no files found
+        Log.d("Found files", "${audioFiles.size}")
 
         for (file in audioFiles) {
             // Only process files if they haven't been processed before, or have been updated
-            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
-                // update shared preference to last file processed
-                with (prefs.edit()) {
-                    putString("timestamp", file.dateAdded)
-                    apply() // asynchronous write to external memory
-                    lastTimestamp = file.dateAdded
-                }
-
-                audioName.text = file.title
+            if (!File(ctx.filesDir.toString(), "${file.nameWithoutExtension}-result.csv").exists()) {
+                audioName.text = file.name
                 // Classify birds from audio recording
-                val data = myBird.runTest(file.data)
+                val data = myBird.runTest(file.absolutePath)
                 // Only process data if it exists
                 if (data != null && data.size != 0) {
                     val secondsList = arrayListOf<String>()     // build list of chunks for seconds
-                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
+                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.nameWithoutExtension)    // save results from data to file
                     updateScreen(data, progressBars, secondsList, textViews, ctx, spinner) // print results to phone screen
                 }
             }
