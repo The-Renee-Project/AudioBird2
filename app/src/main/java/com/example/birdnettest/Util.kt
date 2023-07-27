@@ -1,10 +1,9 @@
 package com.example.birdnettest
 
 import android.content.Context
-import android.os.Environment
-import android.util.Log
 import android.view.View
 import android.widget.*
+import org.w3c.dom.Text
 import java.io.File
 import kotlin.math.ceil
 
@@ -19,38 +18,19 @@ class Util (appContext: Context) {
      */
     fun runBirdNet()
     {
-        // Copy files from internal storage of audiomoth app - requires root
-        try {
-            val proc = Runtime.getRuntime().exec(
-                arrayOf(
-                    "su",
-                    "-c",
-                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
-                )
-            )
-            proc.waitFor()
-        } catch (e: Exception) {
-            Log.d("Exceptions", "Exception: $e")
-        }
         // Get all audio files from Downloads folder
-        val audioFiles = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles {
-                dir, filename ->
-            File(dir, filename).isFile && (filename.endsWith(".aac") ||
-                    filename.endsWith(".wav") ||
-                    filename.endsWith(".mp4"))
-        }
-            ?: return // stop if null or no files found
-        Log.d("Found files", "${audioFiles.size}")
+        val audioFileAccessor = AudioFileAccessor()
+        val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
 
         for (file in audioFiles) {
             // Only process files if they haven't been processed before, or have been updated
-            if (!File(ctx.filesDir.toString(), "${file.nameWithoutExtension}-result.csv").exists()) {
+            if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
                 // Classify birds from audio recording
-                val data = myBird.runTest(file.absolutePath)
+                val data = myBird.runTest(file.data)
                 // Only process data if it exists
                 if (data != null && data.size != 0) {
                     val secondsList = arrayListOf<String>()     // build list of chunks for seconds
-                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.nameWithoutExtension)    // save results from data to file
+                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
                 }
             }
         }
@@ -60,49 +40,49 @@ class Util (appContext: Context) {
      * Run birdnet on found files and output to screen
      * Used for running on click
      */
-    fun runBirdNet(progressBars: Array<ProgressBar>,
-                   textViews: Array<TextView>,
+    fun runBirdNet(filesProcessed: TextView,
+                   filesProgress: ProgressBar,
                    audioName: TextView,
-                   spinner: Spinner,
-                   ctx: Context)
+                   progressBars: Array<ProgressBar>,
+                   textViews: Array<TextView>,
+                   spinner: Spinner
+    )
     {
-        // Copy files from internal storage of audiomoth app - requires root
-        try {
-            val proc = Runtime.getRuntime().exec(
-                arrayOf(
-                    "su",
-                    "-c",
-                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
-                )
-            )
-            proc.waitFor()
-        } catch (e: Exception) {
-            Log.d("Exceptions", "Exception: $e")
-        }
+        filesProcessed.visibility = View.VISIBLE
+        filesProgress.visibility = View.VISIBLE
+        audioName.visibility = View.VISIBLE
         // Get all audio files from Downloads folder
-        val audioFiles = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles {
-                dir, filename ->
-            File(dir, filename).isFile && (filename.endsWith(".aac") ||
-                                           filename.endsWith(".wav") ||
-                                           filename.endsWith(".mp4"))
-        }
-            ?: return // stop if no files found
-        Log.d("Found files", "${audioFiles.size}")
-
-        for (file in audioFiles) {
-            // Only process files if they haven't been processed before, or have been updated
-            if (!File(ctx.filesDir.toString(), "${file.nameWithoutExtension}-result.csv").exists()) {
-                audioName.text = file.name
-                // Classify birds from audio recording
-                val data = myBird.runTest(file.absolutePath)
-                // Only process data if it exists
-                if (data != null && data.size != 0) {
-                    val secondsList = arrayListOf<String>()     // build list of chunks for seconds
-                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.nameWithoutExtension)    // save results from data to file
-                    updateScreen(data, progressBars, secondsList, textViews, ctx, spinner) // print results to phone screen
+        val audioFileAccessor = AudioFileAccessor()
+        val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
+        filesProgress.max = 1000
+        var total = 1
+        Thread {
+            for (file in audioFiles) {
+                audioName.text = file.title
+                // Only process files if they haven't been processed before, or have been updated
+                if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
+                    // Classify birds from audio recording
+                    val data = myBird.runTest(file.data)
+                    // Only process data if it exists
+                    if (data != null && data.size != 0) {
+                        val secondsList =
+                            arrayListOf<String>()     // build list of chunks for seconds
+                        saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
+                    }
                 }
+                filesProcessed.text = "$total/${audioFiles.size}"
+                filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
+                total++
             }
-        }
+        }.start()
+//        updateScreen(
+//            data,
+//            progressBars,
+//            secondsList,
+//            textViews,
+//            ctx,
+//            spinner
+//        ) // print results to phone screen
     }
 
     /*

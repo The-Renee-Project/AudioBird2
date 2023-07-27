@@ -1,11 +1,13 @@
 package com.example.birdnettest
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
+import android.text.Editable
 import android.util.Log
 import android.view.View
 import android.widget.*
@@ -14,12 +16,20 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.birdnettest.ui.main.MainFragment
 import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
     private lateinit var util: Util
+
+    private lateinit var statusTable: TableLayout
+    // Array of all confidence bars
+    private lateinit var bars: Array<ProgressBar>
+    // Array of bird names
+    private lateinit var textViews: Array<TextView>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +39,22 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.container, MainFragment.newInstance())
                 .commitNow()
         }
+
+        statusTable = findViewById(R.id.statusTable)
+        bars = arrayOf(
+            findViewById(R.id.determinateBarOne),
+            findViewById(R.id.determinateBarTwo),
+            findViewById(R.id.determinateBarThree),
+            findViewById(R.id.determinateBarFour),
+            findViewById(R.id.determinateBarFive)
+        )
+        textViews = arrayOf(
+            findViewById(com.example.birdnettest.R.id.confidenceOne),
+            findViewById(R.id.confidenceTwo),
+            findViewById(R.id.confidenceThree),
+            findViewById(R.id.confidenceFour),
+            findViewById(R.id.confidenceFive)
+        )
 
         // Array of all permissions to request
         // Handle permissions for Android 12 and greater
@@ -134,32 +160,77 @@ class MainActivity : AppCompatActivity() {
     }
 
     /*
+     * Restart logger
+     * Will delete existing worker and start new worker at current time
+     */
+    fun restartLogger(view: View) {
+        WorkManager.getInstance(applicationContext).cancelUniqueWork("LOGGER")
+        // Logger
+        val loggerWorkRequest =
+            PeriodicWorkRequestBuilder<LoggerWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniquePeriodicWork("LOGGER", ExistingPeriodicWorkPolicy.KEEP, loggerWorkRequest)
+    }
+
+    /*
+     * Restart birdnet worker
+     * Will delete existing worker and start new worker at current time
+     */
+    fun restartBird(view: View) {
+        WorkManager.getInstance(applicationContext).cancelUniqueWork("EXECUTE_BIRDNET")
+        // BirdNET app
+        val birdNetWorkRequest =
+            PeriodicWorkRequestBuilder<BirdnetWorker>(3, TimeUnit.HOURS).build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "EXECUTE_BIRDNET",
+            ExistingPeriodicWorkPolicy.KEEP,
+            birdNetWorkRequest
+        )
+    }
+
+    /*
+     * Show status of app and workers
+     */
+    fun updateStatus(view: View) {
+        for (i in bars.indices) {
+            bars[i].visibility = View.INVISIBLE
+            textViews[i].visibility = View.INVISIBLE
+        }
+        findViewById<TableLayout>(R.id.FileStatus).visibility = View.INVISIBLE
+        statusTable.visibility = View.VISIBLE
+
+        val loggerStatus = WorkManager.getInstance(applicationContext).getWorkInfosForUniqueWork("LOGGER")
+        val birdStatus = WorkManager.getInstance(applicationContext).getWorkInfosForUniqueWork("EXECUTE_BIRDNET")
+        try {
+            val logInfos = loggerStatus.get()
+            for (info in logInfos) {
+                findViewById<TextView>(R.id.logStatus).text = "${info.state}"
+            }
+
+            val birdInfos = birdStatus.get()
+            for (info in birdInfos) {
+                findViewById<TextView>(R.id.birdStatus).text = "${info.state}"
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        val totalFiles = applicationContext.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size ?: 0
+        findViewById<TextView>(R.id.filesProcessed).text = totalFiles.toString()
+    }
+
+    /*
      * Function associated with button click
      * runs inference, and outputs results to screen as well as saving to file
      */
     fun runBirdNet(view: View) {
-        val bars: Array<ProgressBar> = arrayOf(
-            findViewById(R.id.determinateBarOne),
-            findViewById(R.id.determinateBarTwo),
-            findViewById(R.id.determinateBarThree),
-            findViewById(R.id.determinateBarFour),
-            findViewById(R.id.determinateBarFive)
-        )
+        statusTable.visibility = View.INVISIBLE
+        findViewById<TableLayout>(R.id.FileStatus).visibility = View.VISIBLE
 
-        val textViews: Array<TextView> = arrayOf(
-            findViewById(R.id.confidenceOne),
-            findViewById(R.id.confidenceTwo),
-            findViewById(R.id.confidenceThree),
-            findViewById(R.id.confidenceFour),
-            findViewById(R.id.confidenceFive)
-        )
-
-        util.runBirdNet(
+        util.runBirdNet(findViewById(R.id.ProcessStatus),
+            findViewById(R.id.progressBar),
+            findViewById(R.id.audioName),
             bars,
             textViews,
-            findViewById(R.id.audioName),
-            findViewById(R.id.spinner),
-            applicationContext
-        )
+            findViewById(R.id.spinner))
     }
 }

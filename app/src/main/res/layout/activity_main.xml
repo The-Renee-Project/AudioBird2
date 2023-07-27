@@ -5,23 +5,9 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:visibility="visible"
     tools:context=".MainActivity"
-    tools:visibility="gone">
-
-    <TextView
-        android:id="@+id/audioName"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:gravity="center"
-        android:inputType="textPersonName"
-        android:text="File Name: "
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.495"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/birdNET"
-        app:layout_constraintVertical_bias="0.0" />
+    tools:visibility="visible">
 
     <TextView
         android:id="@+id/confidenceOne"
@@ -162,6 +148,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/confidenceFive" />
 
+    <Spinner
+        android:id="@+id/spinner"
+        android:layout_width="127dp"
+        android:layout_height="29dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/audioName"
+        app:layout_constraintVertical_bias="0.035" />
+
     <Button
         android:id="@+id/birdNET"
         android:layout_width="190dp"
@@ -172,17 +169,240 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
 
-    <Spinner
-        android:id="@+id/spinner"
-        android:layout_width="127dp"
-        android:layout_height="29dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+    <Button
+        android:id="@+id/status"
+        android:layout_width="190dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:onClick="updateStatus"
+        android:text="Status"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/audioName"
-        app:layout_constraintVertical_bias="0.035"
+        app:layout_constraintTop_toBottomOf="@+id/birdNET" />
+
+    <TableLayout
+        android:id="@+id/statusTable"
+        android:layout_width="393dp"
+        android:layout_height="250dp"
+        android:layout_marginTop="19dp"
         android:visibility="gone"
-        />
+        app:layout_constraintTop_toBottomOf="@+id/status"
+        tools:layout_editor_absoluteX="9dp"
+        tools:visibility="gone">
+
+        <TableRow
+            android:id="@+id/row1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/loggerStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Logger Worker:"
+                android:textSize="24sp"
+                android:visibility="visible"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/logStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Live"
+                android:textSize="24sp"
+                android:visibility="visible"
+                tools:visibility="visible" />
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/row2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/textView5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Next Run:"
+                android:textSize="24sp" />
+
+            <EditText
+                android:id="@+id/loggerTime"
+                android:layout_width="170dp"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="time" />
+
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/row3"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/birdnetStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BirdNET Worker:   "
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/birdStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Live"
+                android:textSize="24sp" />
+
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/row4"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/textView6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Next Run:"
+                android:textSize="24sp" />
+
+            <EditText
+                android:id="@+id/birdTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="time" />
+
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/row5"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/processedFiles"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Files Processed"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/filesProcessed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="24sp" />
+
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/row6"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="visible">
+
+            <Button
+                android:id="@+id/button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="restartLogger"
+                android:text="Restart Logger" />
+
+            <Button
+                android:id="@+id/button2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="restartBird"
+                android:text="Restart Bird Worker" />
+        </TableRow>
+    </TableLayout>
+
+    <TableLayout
+        android:id="@+id/FileStatus"
+        android:layout_width="417dp"
+        android:layout_height="214dp"
+        android:layout_marginTop="1dp"
+        android:visibility="invisible"
+        app:layout_constraintTop_toBottomOf="@+id/status"
+        tools:layout_editor_absoluteX="-6dp"
+        tools:visibility="visible">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="File Name:"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/audioName"
+                android:layout_width="120dp"
+                android:layout_height="62dp"
+                android:ems="10"
+                android:gravity="center"
+                android:inputType="textPersonName"
+                android:text="@string/file_name"
+                android:textSize="24sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/totalFiles"
+                android:layout_width="187dp"
+                android:layout_height="47dp"
+                android:text="Files Processed:"
+                android:textSize="24sp" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="220dp"
+                android:layout_height="33dp" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="46dp">
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="15dp" />
+
+            <TextView
+                android:id="@+id/ProcessStatus"
+                android:layout_width="105dp"
+                android:layout_height="72dp"
+                android:layout_weight="100"
+                android:text="0/0"
+                android:textSize="24sp" />
+        </TableRow>
+
+    </TableLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

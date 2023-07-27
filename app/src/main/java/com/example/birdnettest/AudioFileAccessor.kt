@@ -24,7 +24,21 @@ class AudioFileAccessor {
         val dateAdded: String
     )
 
-    private fun queryMediaStore(contentResolver: ContentResolver): List<AudioFile> {
+    fun getAudioFiles(contentResolver: ContentResolver): List<AudioFile> {
+        // Copies files from AudioMoth's storage to external storage in the Download folder
+        try {
+            val proc = Runtime.getRuntime().exec(
+                arrayOf(
+                    "su",
+                    "-c",
+                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
+                )
+            )
+            proc.waitFor()
+        } catch (e: Exception) {
+            Log.d("Exceptions", "Exception: $e")
+        }
+
         val audioFiles = mutableListOf<AudioFile>()
 
         var collection =
@@ -156,31 +170,5 @@ class AudioFileAccessor {
 
         Log.d("AudioFileAccessor", "Number of audio files after loop: ${audioFiles.size}")
         return audioFiles
-    }
-
-    private fun refreshMediaStore(contentResolver: ContentResolver, context: Context): List<AudioFile> {
-        val allDownloads = File(Environment.getExternalStorageDirectory().path).list { dir, name -> File(dir, name).isFile }
-        MediaScannerConnection.scanFile(context, allDownloads, null,
-            OnScanCompletedListener { _, _ ->
-                val output = queryMediaStore(contentResolver)
-            })
-        return queryMediaStore(contentResolver)
-    }
-
-    fun getAudioFiles(contentResolver: ContentResolver, context: Context): List<AudioFile> {
-        // Copies files from AudioMoth's storage to external storage in the Download folder
-        try {
-            val proc = Runtime.getRuntime().exec(
-                arrayOf(
-                    "su",
-                    "-c",
-                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
-                )
-            )
-            proc.waitFor()
-        } catch (e: Exception) {
-            Log.d("Exceptions", "Exception: $e")
-        }
-        return refreshMediaStore(contentResolver, context)
     }
 }
