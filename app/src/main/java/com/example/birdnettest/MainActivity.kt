@@ -229,6 +229,7 @@ class MainActivity : AppCompatActivity() {
         util.runBirdNet(findViewById(R.id.ProcessStatus),
             findViewById(R.id.progressBar),
             findViewById(R.id.audioName),
+            findViewById(R.id.doneFlag),
             bars,
             textViews,
             findViewById(R.id.spinner))

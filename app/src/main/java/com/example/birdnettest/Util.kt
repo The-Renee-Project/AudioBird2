@@ -43,14 +43,17 @@ class Util (appContext: Context) {
     fun runBirdNet(filesProcessed: TextView,
                    filesProgress: ProgressBar,
                    audioName: TextView,
+                   doneFlag: TextView,
                    progressBars: Array<ProgressBar>,
                    textViews: Array<TextView>,
                    spinner: Spinner
     )
     {
         filesProcessed.visibility = View.VISIBLE
-        filesProgress.visibility = View.VISIBLE
-        audioName.visibility = View.VISIBLE
+        filesProgress.visibility  = View.VISIBLE
+        audioName.visibility      = View.VISIBLE
+        doneFlag.visibility       = View.VISIBLE
+        doneFlag.text             = ""
         // Get all audio files from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
@@ -58,21 +61,33 @@ class Util (appContext: Context) {
         var total = 1
         Thread {
             for (file in audioFiles) {
-                audioName.text = file.title
-                // Only process files if they haven't been processed before, or have been updated
-                if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
-                    // Classify birds from audio recording
-                    val data = myBird.runTest(file.data)
-                    // Only process data if it exists
-                    if (data != null && data.size != 0) {
-                        val secondsList =
-                            arrayListOf<String>()     // build list of chunks for seconds
-                        saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
+                try {
+                    audioName.text = file.title
+                    // Only process files if they haven't been processed before, or have been updated
+                    if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
+                        // Classify birds from audio recording
+                        val data = myBird.runTest(file.data)
+                        // Only process data if it exists
+                        if (data != null && data.size != 0) {
+                            val secondsList =
+                                arrayListOf<String>()     // build list of chunks for seconds
+                            saveToFile(
+                                data,
+                                secondsList,
+                                ctx.filesDir.toString(),
+                                file.title
+                            )    // save results from data to file
+                        }
                     }
+                    filesProcessed.text = "$total/${audioFiles.size}"
+                    filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
+                    total++
+                    if (total == audioFiles.size) {
+                        doneFlag.text = "DONE!"
+                    }
+                } catch (e: Throwable) {
+                    e.printStackTrace()
                 }
-                filesProcessed.text = "$total/${audioFiles.size}"
-                filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
-                total++
             }
         }.start()
 //        updateScreen(

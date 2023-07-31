@@ -15,7 +15,7 @@ class BirdnetWorker (appContext: Context, workerParams: WorkerParameters): Worke
      */
     override fun doWork(): Result {
         // run birdnet inference
-//        util.runBirdNet()
+        util.runBirdNet()
         try {
             // get all result files or 0 if none exist
             val totalFiles = applicationContext.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size ?: 0

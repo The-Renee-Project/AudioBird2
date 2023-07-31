@@ -104,7 +104,7 @@ class AudioFileAccessor {
             it.close()
         }
 
-        // For android 10 and less also query videos for mp4 files
+        // For android 10 and under also query videos for mp4 files
         if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.Q) {
             collection =
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {

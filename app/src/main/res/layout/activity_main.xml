@@ -335,12 +335,12 @@
 
     <TableLayout
         android:id="@+id/FileStatus"
-        android:layout_width="417dp"
-        android:layout_height="214dp"
+        android:layout_width="413dp"
+        android:layout_height="209dp"
         android:layout_marginTop="1dp"
         android:visibility="invisible"
         app:layout_constraintTop_toBottomOf="@+id/status"
-        tools:layout_editor_absoluteX="-6dp"
+        tools:layout_editor_absoluteX="0dp"
         tools:visibility="visible">
 
         <TableRow
@@ -349,27 +349,27 @@
 
             <TextView
                 android:id="@+id/textView2"
-                android:layout_width="wrap_content"
+                android:layout_width="134dp"
                 android:layout_height="wrap_content"
                 android:text="File Name:"
                 android:textSize="24sp" />
 
             <TextView
                 android:id="@+id/audioName"
-                android:layout_width="120dp"
+                android:layout_width="213dp"
                 android:layout_height="62dp"
                 android:ems="10"
-                android:gravity="center"
+                android:gravity="left"
                 android:inputType="textPersonName"
                 android:text="@string/file_name"
-                android:textSize="24sp"
+                android:textSize="20sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
         </TableRow>
 
         <TableRow
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="73dp">
 
             <TextView
                 android:id="@+id/totalFiles"
@@ -382,7 +382,7 @@
                 android:id="@+id/progressBar"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="220dp"
-                android:layout_height="33dp" />
+                android:layout_height="match_parent" />
 
         </TableRow>
 
@@ -390,9 +390,11 @@
             android:layout_width="match_parent"
             android:layout_height="46dp">
 
-            <Space
+            <TextView
+                android:id="@+id/doneFlag"
                 android:layout_width="wrap_content"
-                android:layout_height="15dp" />
+                android:layout_height="wrap_content"
+                android:textSize="24sp" />
 
             <TextView
                 android:id="@+id/ProcessStatus"
