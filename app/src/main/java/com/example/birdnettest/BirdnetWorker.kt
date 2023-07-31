@@ -34,6 +34,12 @@ class BirdnetWorker (appContext: Context, workerParams: WorkerParameters): Worke
                 }
             }
         }
+        // Keep track of last execution
+        val prefs = ctx.getSharedPreferences("BirdNET_last_execution", Context.MODE_PRIVATE)
+        with(prefs.edit()) {
+            putString("timestamp", Calendar.getInstance().time.toString())
+            apply() // asynchronous write to external memory
+        }
         // Indicate whether the work finished successfully with the Result
         return Result.success()
     }

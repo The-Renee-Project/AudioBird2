@@ -1,6 +1,7 @@
 package com.example.birdnettest
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.birdnettest.ui.main.MainFragment
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -195,6 +197,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<TableLayout>(R.id.FileStatus).visibility = View.INVISIBLE
         statusTable.visibility = View.VISIBLE
 
+        // Update status - RUNNING, ENQUEUED, STOPPED, ...
         val loggerStatus = WorkManager.getInstance(applicationContext).getWorkInfosForUniqueWork("LOGGER")
         val birdStatus = WorkManager.getInstance(applicationContext).getWorkInfosForUniqueWork("EXECUTE_BIRDNET")
         try {
@@ -210,6 +213,11 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        // Keep track of last execution
+        var prefs = applicationContext.getSharedPreferences("BirdNET_last_execution", Context.MODE_PRIVATE)
+        findViewById<TextView>(R.id.birdNETLastRun).text = prefs.getString("timestamp", "N/A")
+        prefs = applicationContext.getSharedPreferences("Logger_last_execution", Context.MODE_PRIVATE)
+        findViewById<TextView>(R.id.LoggerLastRun).text = prefs.getString("timestamp", "N/A")
         val totalFiles = applicationContext.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size ?: 0
         findViewById<TextView>(R.id.filesProcessed).text = totalFiles.toString()
     }
