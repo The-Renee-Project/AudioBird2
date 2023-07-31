@@ -1,10 +1,14 @@
 package com.example.birdnettest
 
 import android.content.Context
+import android.media.MediaScannerConnection
+import android.os.Environment
 import android.view.View
 import android.widget.*
-import org.w3c.dom.Text
 import java.io.File
+import java.io.FileWriter
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.ceil
 
 
@@ -43,7 +47,6 @@ class Util (appContext: Context) {
     fun runBirdNet(filesProcessed: TextView,
                    filesProgress: ProgressBar,
                    audioName: TextView,
-                   doneFlag: TextView,
                    progressBars: Array<ProgressBar>,
                    textViews: Array<TextView>,
                    spinner: Spinner
@@ -52,44 +55,46 @@ class Util (appContext: Context) {
         filesProcessed.visibility = View.VISIBLE
         filesProgress.visibility  = View.VISIBLE
         audioName.visibility      = View.VISIBLE
-        doneFlag.visibility       = View.VISIBLE
-        doneFlag.text             = ""
-        // Get all audio files from Downloads folder
-        val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
-        filesProgress.max = 1000
-        var total = 1
-        Thread {
-            for (file in audioFiles) {
-                try {
-                    audioName.text = file.title
-                    // Only process files if they haven't been processed before, or have been updated
-                    if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
-                        // Classify birds from audio recording
-                        val data = myBird.runTest(file.data)
-                        // Only process data if it exists
-                        if (data != null && data.size != 0) {
-                            val secondsList =
-                                arrayListOf<String>()     // build list of chunks for seconds
-                            saveToFile(
-                                data,
-                                secondsList,
-                                ctx.filesDir.toString(),
-                                file.title
-                            )    // save results from data to file
+
+        MediaScannerConnection.scanFile(
+            ctx, arrayOf(Environment.getExternalStorageDirectory().path), null
+        ) { path, uri_ ->
+            // Get all audio files from Downloads folder
+            val audioFileAccessor = AudioFileAccessor()
+            val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
+            filesProcessed.text = "0/${audioFiles.size}"
+            filesProgress.max = 1000
+            var total = 1
+            Thread {
+                for (file in audioFiles) {
+                    try {
+                        audioName.text = file.title
+                        // Only process files if they haven't been processed before, or have been updated
+                        if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
+                            // Classify birds from audio recording
+                            val data = myBird.runTest(file.data)
+                            // Only process data if it exists
+                            if (data != null && data.size != 0) {
+                                val secondsList =
+                                    arrayListOf<String>()     // build list of chunks for seconds
+                                saveToFile(
+                                    data,
+                                    secondsList,
+                                    ctx.filesDir.toString(),
+                                    file.title
+                                )    // save results from data to file
+                            }
                         }
+                        filesProcessed.text = "$total/${audioFiles.size}"
+                        filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
+                        total++
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
                     }
-                    filesProcessed.text = "$total/${audioFiles.size}"
-                    filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
-                    total++
-                    if (total == audioFiles.size) {
-                        doneFlag.text = "DONE!"
-                    }
-                } catch (e: Throwable) {
-                    e.printStackTrace()
                 }
-            }
-        }.start()
+                writeToLog(false)
+            }.start()
+        }
 //        updateScreen(
 //            data,
 //            progressBars,
@@ -98,6 +103,36 @@ class Util (appContext: Context) {
 //            ctx,
 //            spinner
 //        ) // print results to phone screen
+    }
+
+    /*
+     * Write stats to log
+     */
+    fun writeToLog(isWorker: Boolean) {
+        // Write to log
+        val totalFiles =
+            ctx.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size
+                ?: 0
+        // Calculate how many new files were created
+        val prefs = ctx.getSharedPreferences("files_processed", Context.MODE_PRIVATE)
+        var newFiles = prefs.getInt("processed", 0)
+        newFiles = totalFiles - newFiles
+        with(prefs.edit()) {
+            putInt("processed", totalFiles)
+            apply() // asynchronous write to external memory
+        }
+        // Write to log
+        FileWriter("${ctx.filesDir}/AudioBird-Log.txt", true).use { out ->
+            out.write("\n------------------------------------------------------------------------\n")
+            if (isWorker) {
+                out.write("BirdNET worker Completed Successfully: ${Calendar.getInstance().time}\n")
+            } else {
+                out.write("Button Pressed, BirdNET Completed Successfully: ${Calendar.getInstance().time}\n")
+            }
+            out.write("Total Files Found: $totalFiles\n")
+            out.write("New Files Processed: $newFiles\n")
+            out.write("--------------------------------------------------------------------------\n")
+        }
     }
 
     /*

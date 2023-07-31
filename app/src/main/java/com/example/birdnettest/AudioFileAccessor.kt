@@ -3,13 +3,13 @@ package com.example.birdnettest
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
-import android.media.MediaScannerConnection
 import android.media.MediaScannerConnection.OnScanCompletedListener
+import android.media.MediaScannerConnection.scanFile
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.MediaStore.Audio
 import android.util.Log
-import java.io.File
 
 
 // Resource used: https://developer.android.com/training/data-storage/shared/media.
@@ -31,7 +31,7 @@ class AudioFileAccessor {
                 arrayOf(
                     "su",
                     "-c",
-                    "cp /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
+                    "cp -n /data/user/0/org.nativescript.AudioMoth9/files/* /sdcard/Download"
                 )
             )
             proc.waitFor()

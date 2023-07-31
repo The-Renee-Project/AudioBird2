@@ -1,13 +1,11 @@
 package com.example.birdnettest
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
-import android.text.Editable
 import android.util.Log
 import android.view.View
 import android.widget.*
@@ -16,11 +14,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.birdnettest.ui.main.MainFragment
 import java.util.concurrent.TimeUnit
-import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
     private lateinit var util: Util
@@ -49,7 +45,7 @@ class MainActivity : AppCompatActivity() {
             findViewById(R.id.determinateBarFive)
         )
         textViews = arrayOf(
-            findViewById(com.example.birdnettest.R.id.confidenceOne),
+            findViewById(R.id.confidenceOne),
             findViewById(R.id.confidenceTwo),
             findViewById(R.id.confidenceThree),
             findViewById(R.id.confidenceFour),
@@ -229,7 +225,6 @@ class MainActivity : AppCompatActivity() {
         util.runBirdNet(findViewById(R.id.ProcessStatus),
             findViewById(R.id.progressBar),
             findViewById(R.id.audioName),
-            findViewById(R.id.doneFlag),
             bars,
             textViews,
             findViewById(R.id.spinner))

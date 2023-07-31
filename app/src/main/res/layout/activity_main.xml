@@ -361,7 +361,6 @@
                 android:ems="10"
                 android:gravity="left"
                 android:inputType="textPersonName"
-                android:text="@string/file_name"
                 android:textSize="20sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
@@ -390,11 +389,9 @@
             android:layout_width="match_parent"
             android:layout_height="46dp">
 
-            <TextView
-                android:id="@+id/doneFlag"
+            <Space
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="24sp" />
+                android:layout_height="wrap_content" />
 
             <TextView
                 android:id="@+id/ProcessStatus"
