@@ -63,8 +63,10 @@ class Util (appContext: Context) {
             val audioFileAccessor = AudioFileAccessor()
             val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
             filesProcessed.text = "0/${audioFiles.size}"
+            filesProgress.progress = 0
             filesProgress.max = 1000
             var total = 1
+
             Thread {
                 for (file in audioFiles) {
                     try {
