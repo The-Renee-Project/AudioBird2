@@ -3,6 +3,8 @@ package com.example.birdnettest
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.*
 import java.io.File
@@ -87,9 +89,11 @@ class Util (appContext: Context) {
                                 )    // save results from data to file
                             }
                         }
-                        filesProcessed.text = "$total/${audioFiles.size}"
-                        filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
-                        total++
+                        Handler(Looper.getMainLooper()).post {
+                            filesProcessed.text = "$total/${audioFiles.size}"
+                            filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
+                            total++
+                        }
                     } catch (e: Throwable) {
                         e.printStackTrace()
                     }
