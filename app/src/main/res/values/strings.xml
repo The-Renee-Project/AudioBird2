@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">BirdnetTest</string>
+    <string name="file_name">File Name:</string>
 </resources>

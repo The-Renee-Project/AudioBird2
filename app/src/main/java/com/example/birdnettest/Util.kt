@@ -1,10 +1,16 @@
 package com.example.birdnettest
 
 import android.content.Context
-import android.content.Context.MODE_PRIVATE
+import android.media.MediaScannerConnection
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.*
 import java.io.File
+import java.io.FileWriter
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.ceil
 
 
@@ -16,24 +22,18 @@ class Util (appContext: Context) {
      * Run birdnet on found files without outputting to screen
      * Used by the birdnet worker to run periodically
      */
-    fun runBirdNet(){
+    fun runBirdNet()
+    {
         // Get all audio files from Downloads folder
         val audioFileAccessor = AudioFileAccessor()
         val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
-        // shared preferences to make sure we only read new files
-        val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
-        val lastTimestamp = prefs.getString("timestamp", "")
 
         for (file in audioFiles) {
             // Only process files if they haven't been processed before, or have been updated
-            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
-                // update shared preference to last file processed
-                with (prefs.edit()) {
-                    putString("timestamp", file.dateAdded)
-                    apply() // asynchronous write to external memory
-                }
-
+            if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
+                // Classify birds from audio recording
                 val data = myBird.runTest(file.data)
+                // Only process data if it exists
                 if (data != null && data.size != 0) {
                     val secondsList = arrayListOf<String>()     // build list of chunks for seconds
                     saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
@@ -46,39 +46,98 @@ class Util (appContext: Context) {
      * Run birdnet on found files and output to screen
      * Used for running on click
      */
-    fun runBirdNet(progressBars: Array<ProgressBar>,
-                   textViews: Array<TextView>,
+    fun runBirdNet(filesProcessed: TextView,
+                   filesProgress: ProgressBar,
                    audioName: TextView,
-                   spinner: Spinner,
-                   ctx: Context)
+                   progressBars: Array<ProgressBar>,
+                   textViews: Array<TextView>,
+                   spinner: Spinner
+    )
     {
-        // Get all audio files from Downloads folder
-        val audioFileAccessor = AudioFileAccessor()
-        val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
-        // shared preferences to make sure we only read new files
-        val prefs = ctx.getSharedPreferences("last_timestamp", MODE_PRIVATE)
-        var lastTimestamp = prefs.getString("timestamp", "")
+        filesProcessed.visibility = View.VISIBLE
+        filesProgress.visibility  = View.VISIBLE
+        audioName.visibility      = View.VISIBLE
 
-        for (file in audioFiles) {
-            // Only process files if they haven't been processed before, or have been updated
-            if(lastTimestamp == null || lastTimestamp == "" || file.dateAdded > lastTimestamp) {
-                // update shared preference to last file processed
-                with (prefs.edit()) {
-                    putString("timestamp", file.dateAdded)
-                    apply() // asynchronous write to external memory
-                    lastTimestamp = file.dateAdded
-                }
+        MediaScannerConnection.scanFile(
+            ctx, arrayOf(Environment.getExternalStorageDirectory().path), null
+        ) { path, uri_ ->
+            // Get all audio files from Downloads folder
+            val audioFileAccessor = AudioFileAccessor()
+            val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
+            filesProcessed.text = "0/${audioFiles.size}"
+            filesProgress.progress = 0
+            filesProgress.max = 1000
+            var total = 1
 
-                audioName.text = file.title
-                // Classify birds from audio recording
-                val data = myBird.runTest(file.data)
-                // Only process data if it exists
-                if (data != null && data.size != 0) {
-                    val secondsList = arrayListOf<String>()     // build list of chunks for seconds
-                    saveToFile(data, secondsList, ctx.filesDir.toString(), file.title)    // save results from data to file
-                    updateScreen(data, progressBars, secondsList, textViews, ctx, spinner) // print results to phone screen
+            Thread {
+                for (file in audioFiles) {
+                    try {
+                        audioName.text = file.title
+                        // Only process files if they haven't been processed before, or have been updated
+                        if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
+                            // Classify birds from audio recording
+                            val data = myBird.runTest(file.data)
+                            // Only process data if it exists
+                            if (data != null && data.size != 0) {
+                                val secondsList =
+                                    arrayListOf<String>()     // build list of chunks for seconds
+                                saveToFile(
+                                    data,
+                                    secondsList,
+                                    ctx.filesDir.toString(),
+                                    file.title
+                                )    // save results from data to file
+                            }
+                        }
+                        Handler(Looper.getMainLooper()).post {
+                            filesProcessed.text = "$total/${audioFiles.size}"
+                            filesProgress.progress = ((total.toDouble() / audioFiles.size) * 1000).toInt()
+                            total++
+                        }
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
+                    }
                 }
+                writeToLog(false)
+            }.start()
+        }
+//        updateScreen(
+//            data,
+//            progressBars,
+//            secondsList,
+//            textViews,
+//            ctx,
+//            spinner
+//        ) // print results to phone screen
+    }
+
+    /*
+     * Write stats to log
+     */
+    fun writeToLog(isWorker: Boolean) {
+        // Write to log
+        val totalFiles =
+            ctx.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size
+                ?: 0
+        // Calculate how many new files were created
+        val prefs = ctx.getSharedPreferences("files_processed", Context.MODE_PRIVATE)
+        var newFiles = prefs.getInt("processed", 0)
+        newFiles = totalFiles - newFiles
+        with(prefs.edit()) {
+            putInt("processed", totalFiles)
+            apply() // asynchronous write to external memory
+        }
+        // Write to log
+        FileWriter("${ctx.filesDir}/AudioBird-Log.txt", true).use { out ->
+            out.write("\n------------------------------------------------------------------------\n")
+            if (isWorker) {
+                out.write("BirdNET worker Completed Successfully: ${Calendar.getInstance().time}\n")
+            } else {
+                out.write("Button Pressed, BirdNET Completed Successfully: ${Calendar.getInstance().time}\n")
             }
+            out.write("Total Files Found: $totalFiles\n")
+            out.write("New Files Processed: $newFiles\n")
+            out.write("--------------------------------------------------------------------------\n")
         }
     }
 
