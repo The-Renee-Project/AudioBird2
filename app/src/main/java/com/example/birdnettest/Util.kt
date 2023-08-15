@@ -74,8 +74,8 @@ class Util (appContext: Context) {
                 for (file in audioFiles) {
                     try {
                         audioName.text = file.title
-                        // Only process files if they haven't been processed before, or have been updated
-                        if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists()) {
+                        // Only process files if they haven't been processed before
+                        if (!File(ctx.filesDir.toString(), "${file.title}-result.csv").exists() && !file.title.endsWith("-output")) {
                             // Classify birds from audio recording
                             val data = myBird.runTest(file.data)
                             // Only process data if it exists
