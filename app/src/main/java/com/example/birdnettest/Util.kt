@@ -61,6 +61,7 @@ class Util (appContext: Context) {
         MediaScannerConnection.scanFile(
             ctx, arrayOf(Environment.getExternalStorageDirectory().path), null
         ) { path, uri_ ->
+            val start = Calendar.getInstance().time
             // Get all audio files from Downloads folder
             val audioFileAccessor = AudioFileAccessor()
             val audioFiles = audioFileAccessor.getAudioFiles(ctx.contentResolver)
@@ -98,7 +99,7 @@ class Util (appContext: Context) {
                         e.printStackTrace()
                     }
                 }
-                writeToLog(false)
+                writeToLog(start, false)
             }.start()
         }
 //        updateScreen(
@@ -114,7 +115,7 @@ class Util (appContext: Context) {
     /*
      * Write stats to log
      */
-    fun writeToLog(isWorker: Boolean) {
+    fun writeToLog(start: java.util.Date, isWorker: Boolean) {
         // Write to log
         val totalFiles =
             ctx.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size
@@ -130,11 +131,9 @@ class Util (appContext: Context) {
         // Write to log
         FileWriter("${ctx.filesDir}/AudioBird-Log.txt", true).use { out ->
             out.write("\n------------------------------------------------------------------------\n")
-            if (isWorker) {
-                out.write("BirdNET worker Completed Successfully: ${Calendar.getInstance().time}\n")
-            } else {
-                out.write("Button Pressed, BirdNET Completed Successfully: ${Calendar.getInstance().time}\n")
-            }
+            if (!isWorker) { out.write("Button Pressed\n") }
+            out.write("BirdNET worker Started Successfully: $start\n")
+            out.write("BirdNET worker Completed Successfully: ${Calendar.getInstance().time}\n")
             out.write("Total Files Found: $totalFiles\n")
             out.write("New Files Processed: $newFiles\n")
             out.write("--------------------------------------------------------------------------\n")

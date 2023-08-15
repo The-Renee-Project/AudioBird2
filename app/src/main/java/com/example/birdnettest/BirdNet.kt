@@ -2,6 +2,7 @@ package com.example.birdnettest
 
 // Android libraries
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 
 // java imports
@@ -74,11 +75,12 @@ class BirdNet (ctx: Context) {
      */
     private fun runInterpreter(samples: ArrayList<FloatArray>) : ArrayList<ArrayList<Pair<String,Float>>> {
         val result = arrayListOf<ArrayList<Pair<String,Float>>>()
-
+        var start = SystemClock.uptimeMillis()
         for (i in samples.indices) {
             result.add(generateDataPair(getConfidences(samples[i]))) // Get top 5 outputs
         }
-
+        start = SystemClock.uptimeMillis() - start
+        Log.d("TIMER", "$start ms")
         return result
     }
 
@@ -103,7 +105,7 @@ class BirdNet (ctx: Context) {
      */
     private fun toWav(audioFile: String): String {
         val outFile = audioFile.substring(0, audioFile.lastIndexOf("/")) +
-                      audioFile.substring(audioFile.lastIndexOf("/"), audioFile.lastIndexOf(".")) + ".wav"
+                      audioFile.substring(audioFile.lastIndexOf("/"), audioFile.lastIndexOf(".")) + "-output.wav"
         // Do not process file if it already exists
         val file = File(outFile)
         if (file.exists()) {
