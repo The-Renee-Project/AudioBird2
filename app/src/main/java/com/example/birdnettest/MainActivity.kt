@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
             }
         }
-        // Check whether or not the application has permission to read/write files.
+        // Check whether or not the application has permssion to read/write files.
         if (hasPermissions(permissions)) {
             runJobWorkers()
         } else {
@@ -160,7 +160,7 @@ class MainActivity : AppCompatActivity() {
      * Restart logger
      * Will delete existing worker and start new worker at current time
      */
-    fun restartLogger(view: View) {
+    private fun restartLogger() {
         WorkManager.getInstance(applicationContext).cancelUniqueWork("LOGGER")
         // Logger
         val loggerWorkRequest =
@@ -173,7 +173,7 @@ class MainActivity : AppCompatActivity() {
      * Restart birdnet worker
      * Will delete existing worker and start new worker at current time
      */
-    fun restartBird(view: View) {
+    private fun restartBird() {
         WorkManager.getInstance(applicationContext).cancelUniqueWork("EXECUTE_BIRDNET")
         // BirdNET app
         val birdNetWorkRequest =
@@ -188,7 +188,8 @@ class MainActivity : AppCompatActivity() {
     /*
      * Show status of app and workers
      */
-    fun updateStatus(view: View) {
+    private fun updateStatus() {
+        // Toggle visibility for status
         for (i in bars.indices) {
             bars[i].visibility = View.INVISIBLE
             textViews[i].visibility = View.INVISIBLE
@@ -225,15 +226,22 @@ class MainActivity : AppCompatActivity() {
      * Function associated with button click
      * runs inference, and outputs results to screen as well as saving to file
      */
-    fun runBirdNet(view: View) {
+    private fun runBirdNet() {
         statusTable.visibility = View.INVISIBLE
         findViewById<TableLayout>(R.id.FileStatus).visibility = View.VISIBLE
 
         util.runBirdNet(findViewById(R.id.ProcessStatus),
             findViewById(R.id.progressBar),
-            findViewById(R.id.audioName),
-            bars,
-            textViews,
-            findViewById(R.id.spinner))
+            findViewById(R.id.audioName))
     }
+
+   fun onClick(view: View) {
+       when (view.id) {
+           R.id.restartBirdWorker -> restartBird()
+           R.id.restartLogger     -> restartLogger()
+           R.id.birdNET           -> runBirdNet()
+           R.id.status            -> updateStatus()
+       }
+    }
+
 }

@@ -27,7 +27,7 @@ class BirdnetWorker (appContext: Context, workerParams: WorkerParameters): Worke
                 util.writeToLog(start, true)
             } catch (e: Exception) {
                 e.printStackTrace()
-                FileWriter("${applicationContext.filesDir}/AudioBird-Log.txt", true).use { out ->
+                FileWriter("${ctx.filesDir}/AudioBird-Log.txt", true).use { out ->
                     out.write("\n------------------------------------------------------------------------\n")
                     out.write("BirdNET worker Started Successfully: $start\n")
                     out.write("BirdNET Worker Stopped: ${Calendar.getInstance().time}\n")

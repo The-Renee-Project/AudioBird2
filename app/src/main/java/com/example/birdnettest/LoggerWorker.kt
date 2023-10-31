@@ -7,6 +7,7 @@ import java.io.FileWriter
 import java.util.Calendar
 
 class LoggerWorker (appContext: Context, workerParams: WorkerParameters): Worker(appContext, workerParams) {
+    private val ctx = appContext
 
     /*
      * Function that is run by task scheduler
@@ -14,11 +15,11 @@ class LoggerWorker (appContext: Context, workerParams: WorkerParameters): Worker
     override fun doWork(): Result {
         // Log to file
         try {
-            FileWriter("${applicationContext.filesDir}/AudioBird-Log.txt", true).use { out ->
+            FileWriter("${ctx.filesDir}/AudioBird-Log.txt", true).use { out ->
                 out.write("Logger Successfully Ran: ${Calendar.getInstance().time}\n")
             }
             // Keep track of last execution
-            val prefs = applicationContext.getSharedPreferences("Logger_last_execution", Context.MODE_PRIVATE)
+            val prefs = ctx.getSharedPreferences("Logger_last_execution", Context.MODE_PRIVATE)
             with(prefs.edit()) {
                 putString("timestamp", Calendar.getInstance().time.toString())
                 apply() // asynchronous write to external memory
