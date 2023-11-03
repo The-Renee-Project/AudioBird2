@@ -22,7 +22,7 @@ import kotlin.collections.ArrayList
 
 class BirdNet (ctx: Context) {
     private var sampleRate = 48000           // Standard sampling rate of audio files
-    private var threshold = 0.05             // Minimum confidence filter
+    private var threshold = 0.0             // Minimum confidence filter
     private var sensitivity = -1.0
     private val context    = ctx             // Context/app screen
 
@@ -41,14 +41,15 @@ class BirdNet (ctx: Context) {
      */
     private fun generateDataPair(confidences: FloatArray): ArrayList<Pair<String,Float>> {
         val outputString = arrayListOf<Pair<String,Float>>()
-        val topFive = confidences.sortedArrayDescending().copyOfRange(0, 20) // Get 5 highest confidences
+        val topFive = (species zip confidences.asList()).sortedByDescending { it.second }.subList(0, 5)
+        //val topFive = confidences.sortedArrayDescending().copyOfRange(0, 20) // Get 20 highest confidences
 
         // Build string with 5 highest confidences and corresponding species
-        for (confidence in topFive) {
-            val index = confidences.indexOfFirst{it == confidence}
+        for (pair in topFive) {
             // Only keep results with confidences higher than threshold
-            if (sigmoid(confidence) > threshold) {
-                outputString.add(Pair(species[index], sigmoid(confidence)))
+            val squashedValue = sigmoid(pair.second)
+            if (squashedValue > threshold) {
+                outputString.add(Pair(pair.first, squashedValue))
             }
         }
 
