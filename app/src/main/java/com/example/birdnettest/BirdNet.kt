@@ -2,7 +2,6 @@ package com.example.birdnettest
 
 // Android libraries
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
 
 // java imports
@@ -19,19 +18,22 @@ import org.tensorflow.lite.DataType
 import com.arthenica.ffmpegkit.ReturnCode
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.jlibrosa.audio.JLibrosa
+import kotlin.collections.ArrayList
 
 class BirdNet (ctx: Context) {
-    private var sampleRate     = 48000           // Standard sampling rate of audio files
-    private val context        = ctx             // Context/app screen
+    private var sampleRate = 48000           // Standard sampling rate of audio files
+    private var threshold = 0.0             // Minimum confidence filter
+    private var sensitivity = -1.0
+    private val context    = ctx             // Context/app screen
 
     private lateinit var model: BirdnetGlobal6kV24ModelFp32 // BirdNet interpreter
-    private lateinit var species: List<String>                      // All species
+    private lateinit var species: List<String>              // All species
 
     /**
      * Activation function taken from BirdNet-analyzer code
      */
     private fun sigmoid(prediction: Float): Float {
-        return (1.0 / (1.0 + kotlin.math.exp(-1.5 * prediction.coerceIn(-15.0f, 15.0f)))).toFloat()
+        return (1.0 / (1.0 + kotlin.math.exp(sensitivity * prediction.coerceIn(-15.0f, 15.0f)))).toFloat()
     }
 
     /**
@@ -39,13 +41,16 @@ class BirdNet (ctx: Context) {
      */
     private fun generateDataPair(confidences: FloatArray): ArrayList<Pair<String,Float>> {
         val outputString = arrayListOf<Pair<String,Float>>()
-
-        val topFive = confidences.sortedArrayDescending().copyOfRange(0, 5) // Get 5 highest confidences
+        val topFive = (species zip confidences.asList()).sortedByDescending { it.second }.subList(0, 5)
+        //val topFive = confidences.sortedArrayDescending().copyOfRange(0, 20) // Get 20 highest confidences
 
         // Build string with 5 highest confidences and corresponding species
-        for (confidence in topFive) {
-            val index = confidences.indexOfFirst{it == confidence}
-            outputString.add(Pair(species[index], sigmoid(confidence)))
+        for (pair in topFive) {
+            // Only keep results with confidences higher than threshold
+            val squashedValue = sigmoid(pair.second)
+            if (squashedValue > threshold) {
+                outputString.add(Pair(pair.first, squashedValue))
+            }
         }
 
         return outputString
@@ -75,12 +80,11 @@ class BirdNet (ctx: Context) {
      */
     private fun runInterpreter(samples: ArrayList<FloatArray>) : ArrayList<ArrayList<Pair<String,Float>>> {
         val result = arrayListOf<ArrayList<Pair<String,Float>>>()
-        var start = SystemClock.uptimeMillis()
+
         for (i in samples.indices) {
             result.add(generateDataPair(getConfidences(samples[i]))) // Get top 5 outputs
         }
-        start = SystemClock.uptimeMillis() - start
-        Log.d("TIMER", "$start ms")
+
         return result
     }
 
@@ -124,7 +128,9 @@ class BirdNet (ctx: Context) {
      */
     private fun getSamples(audioFile: String): ArrayList<FloatArray> {
         // Call JLibrosa to get audio data in floats
-        return segmentAudio(JLibrosa().loadAndRead(toWav(audioFile), sampleRate,-1))
+        val wavFile = toWav(audioFile)
+        val rawAudio = JLibrosa().loadAndRead(wavFile, sampleRate, -1)
+        return segmentAudio(rawAudio)
     }
 
     /**

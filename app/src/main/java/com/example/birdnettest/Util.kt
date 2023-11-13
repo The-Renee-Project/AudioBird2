@@ -5,8 +5,10 @@ import android.media.MediaScannerConnection
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.View
 import android.widget.*
+import android.util.Log
 import java.io.File
 import java.io.FileWriter
 import java.util.*
@@ -16,7 +18,7 @@ import kotlin.math.ceil
 
 class Util (appContext: Context) {
     private val myBird = BirdNet(appContext)
-    private val ctx = appContext
+    private val ctx    = appContext
 
     /*
      * Run birdnet on found files without outputting to screen
@@ -48,11 +50,7 @@ class Util (appContext: Context) {
      */
     fun runBirdNet(filesProcessed: TextView,
                    filesProgress: ProgressBar,
-                   audioName: TextView,
-                   progressBars: Array<ProgressBar>,
-                   textViews: Array<TextView>,
-                   spinner: Spinner
-    )
+                   audioName: TextView)
     {
         filesProcessed.visibility = View.VISIBLE
         filesProgress.visibility  = View.VISIBLE
@@ -102,20 +100,12 @@ class Util (appContext: Context) {
                 writeToLog(start, false)
             }.start()
         }
-//        updateScreen(
-//            data,
-//            progressBars,
-//            secondsList,
-//            textViews,
-//            ctx,
-//            spinner
-//        ) // print results to phone screen
     }
 
     /*
      * Write stats to log
      */
-    fun writeToLog(start: java.util.Date, isWorker: Boolean) {
+    fun writeToLog(start: Date, isWorker: Boolean) {
         // Write to log
         val totalFiles =
             ctx.filesDir.list { _, name -> name.endsWith("-result.csv") }?.size
@@ -170,11 +160,10 @@ class Util (appContext: Context) {
                              progressBars: Array<ProgressBar>,
                              secondsList: ArrayList<String>,
                              textViews: Array<TextView>,
-                             appContext: Context,
                              spinner: Spinner)
     {
         val arrayAdapter =
-            ArrayAdapter(appContext, android.R.layout.simple_spinner_item, secondsList)
+            ArrayAdapter(ctx, android.R.layout.simple_spinner_item, secondsList)
         arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinner.adapter = arrayAdapter
 
